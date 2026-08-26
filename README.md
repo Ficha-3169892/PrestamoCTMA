@@ -64,6 +64,6 @@ com.ctma.prestamolab/
 
 ## 👤 Autor
 
-- **Nombre:** Stiven Tobon T.
+- **Nombre:** Stiven T.
 - **Programa:** Análisis y Desarrollo de Software (ADSO)
 - **Centro:** Centro de Tecnología de la Manufactura Avanzada (CTMA) - SENA
