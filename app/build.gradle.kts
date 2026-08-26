@@ -5,7 +5,13 @@ plugins {
 
 android {
     namespace = "com.example.prestamolabctma"
+<<<<<<< HEAD
     compileSdk = 37
+=======
+    compileSdk {
+        version = release(37)
+    }
+>>>>>>> origin/dev
 
     defaultConfig {
         applicationId = "com.example.prestamolabctma"
@@ -19,8 +25,14 @@ android {
 
     buildTypes {
         release {
+<<<<<<< HEAD
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+=======
+            optimization {
+                enable = false
+            }
+>>>>>>> origin/dev
         }
     }
     compileOptions {
@@ -36,6 +48,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
+<<<<<<< HEAD
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -44,9 +57,22 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     
     testImplementation(libs.junit)
+=======
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    testImplementation(libs.junit)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+>>>>>>> origin/dev
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/dev
