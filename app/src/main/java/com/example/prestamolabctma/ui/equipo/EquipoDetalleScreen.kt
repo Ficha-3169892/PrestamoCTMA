@@ -17,7 +17,7 @@ import com.example.prestamolabctma.ui.catalogo.StatusBadge
 fun EquipoDetalleScreen(
     equipo: Equipo?,
     onBack: () -> Unit,
-    onSolicitar: (Int) -> Unit
+    onSolicitar: (Int) -> Unit,
 ) {
     Scaffold(
         topBar = {

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class PrestamoViewModel(
-    private val repository: PrestamoRepository
+    private val repository: PrestamoRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrestamoUiState())
@@ -48,13 +48,13 @@ class PrestamoViewModel(
         }
 
         // RN-03: Propósito entre 10 y 180 caracteres
-        if (proposito.length !in 10..180) {
+        if ((proposito.length !in 10..180)) {
             _uiState.update { it.copy(errorFormulario = "El propósito debe tener entre 10 y 180 caracteres") }
             return
         }
 
         // RN-04: Duración entre 1 y 8 horas
-        if (duracion < 1 || duracion > 8) {
+        if (duracion !in 1..8) {
             _uiState.update { it.copy(errorFormulario = "La duración debe estar entre 1 y 8 horas") }
             return
         }

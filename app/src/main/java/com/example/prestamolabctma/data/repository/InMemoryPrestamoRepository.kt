@@ -16,7 +16,10 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         Equipo(5, "Tablet Samsung S7", CategoriaEquipo.COMPUTO, EstadoEquipo.PRESTADO)
     )
 
-    private val solicitudes = mutableListOf<SolicitudPrestamo>()
+    private val solicitudes = mutableListOf(
+        SolicitudPrestamo(101, 4, "Laboratorio 1", "Pruebas de red", 2, EstadoSolicitud.APROBADA),
+        SolicitudPrestamo(102, 5, "Aula 204", "Clase de diseño", 4, EstadoSolicitud.ENTREGADA)
+    )
 
     override fun obtenerEquipos(): List<Equipo> = equipos.toList()
 

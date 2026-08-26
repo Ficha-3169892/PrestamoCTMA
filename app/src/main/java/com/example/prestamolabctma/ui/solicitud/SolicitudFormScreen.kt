@@ -54,7 +54,7 @@ fun SolicitudFormScreen(
                 onValueChange = { ambiente = it },
                 label = { Text("Ambiente o Destino") },
                 modifier = Modifier.fillMaxWidth(),
-                isError = error != null && ambiente.isBlank(),
+                isError = (error != null && ambiente.isBlank()),
             )
 
             OutlinedTextField(
@@ -80,7 +80,7 @@ fun SolicitudFormScreen(
                     onRegistrar(ambiente, proposito, dur) 
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !guardando
+                enabled = !guardando,
             ) {
                 if (guardando) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))

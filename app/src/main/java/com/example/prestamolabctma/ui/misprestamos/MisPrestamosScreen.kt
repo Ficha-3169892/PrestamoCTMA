@@ -18,7 +18,7 @@ import com.example.prestamolabctma.model.SolicitudPrestamo
 fun MisPrestamosScreen(
     solicitudes: List<SolicitudPrestamo>,
     onBack: () -> Unit,
-    onCancelar: (Int) -> Unit
+    onCancelar: (Int) -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -53,7 +53,9 @@ fun MisPrestamosScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(solicitudes) { solicitud ->
-                    SolicitudItem(solicitud = solicitud, onCancelar = { onCancelar(solicitud.id) })
+                    SolicitudItem(solicitud = solicitud) { 
+                    onCancelar(solicitud.id) 
+                }
                 }
             }
         }
