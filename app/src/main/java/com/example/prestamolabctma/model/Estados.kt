@@ -2,8 +2,11 @@ package com.example.prestamolabctma.model
 
 @Suppress("unused")
 enum class CategoriaEquipo {
-    COMPUTO,
+    ELECTRONICA,
+    REDES,
     HERRAMIENTAS,
+    MEDICION,
+    COMPUTO,
     AUDIOVISUAL,
     OTROS
 }
@@ -12,7 +15,9 @@ enum class CategoriaEquipo {
 enum class EstadoEquipo {
     DISPONIBLE,
     RESERVADO,
-    PRESTADO
+    PRESTADO,
+    MANTENIMIENTO,
+    FUERA_DE_SERVICIO
 }
 
 @Suppress("unused")
@@ -22,5 +27,13 @@ enum class EstadoSolicitud {
     ENTREGADA,
     DEVUELTA,
     CANCELADA,
-    RECHAZADA
+    RECHAZADA,
+    COMPLETADA
+}
+
+@Suppress("unused")
+enum class NivelGravedad {
+    LEVE,
+    MODERADO,
+    GRAVE
 }

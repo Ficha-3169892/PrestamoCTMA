@@ -7,5 +7,9 @@ data class SolicitudPrestamo(
     val ambienteDestino: String,
     val proposito: String,
     val duracionHoras: Int,
-    val estado: EstadoSolicitud
+    val estado: EstadoSolicitud,
+    val fechaSolicitud: Long = System.currentTimeMillis(),
+    val justificacionRechazo: String? = null,
+    val novedadDevolucion: String? = null,
+    val gravedadNovedad: NivelGravedad? = null,
 )

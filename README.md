@@ -1,85 +1,65 @@
-# PréstamoLab CTMA - Incremento Funcional
+# PréstamoLab CTMA 📱🔬
 
-## 1. Información del Proyecto
-**Institución:** SENA  
-**Instructor a cargo:** Wilson Castro Gil  
-**Rol en el equipo:** Scrum Master  
-**Estado del Incremento:** Rama de trabajo personal - Finalizado / Verificado  
+**PréstamoLab CTMA** es una solución móvil integral desarrollada en Android para la gestión eficiente, segura y trazable del préstamo de equipos en los laboratorios del Centro de Tecnología de la Manufactura y el Desarrollo de la Automatización (CTMA).
 
----
-
-## 2. Descripción del Producto
-**PréstamoLab CTMA** es un prototipo educativo desarrollado en Android diseñado para optimizar la trazabilidad, consulta y registro de préstamos de recursos de formación (equipos y herramientas). El objetivo es reemplazar procesos manuales por una experiencia móvil ágil, accesible y coherente.
-
-### Product Goal
-Mejorar la trazabilidad y consulta de préstamos de recursos de formación mediante una experiencia móvil.
+## 🚀 Propósito del Proyecto
+Optimizar el flujo de solicitud y entrega de herramientas técnicas, garantizando que tanto aprendices como instructores cuenten con información en tiempo real sobre la disponibilidad y el estado físico del inventario.
 
 ---
 
-## 3. Arquitectura y Tecnologías
-El proyecto se ha construido siguiendo las mejores prácticas de la arquitectura moderna de Android:
+## ✨ Funcionalidades Principales
 
-- **Lenguaje:** Kotlin (JVM Target 11 / SDK 37).
-- **Interfaz:** Jetpack Compose con Material Design 3.
-- **Arquitectura:** MVVM (Model-View-ViewModel).
-- **Gestión de Estado:** UiState con StateFlow observable.
-- **Capa de Datos:** Patrón Repository con implementación `InMemoryRepository` compartida para simular persistencia durante el ciclo de vida de la aplicación.
-- **Navegación:** Navigation Compose utilizando paso de identificadores (`equipoId`, `solicitudId`).
+### 🎓 Para el Aprendiz (Módulo de Usuario)
+- **Consulta de Catálogo (HU-01, HU-07):** Búsqueda en tiempo real y filtrado por categorías (Electrónica, Redes, Herramientas, Medición, Cómputo, Audiovisual).
+- **Ficha Técnica Multimedia (HU-04):** Visualización detallada de cada equipo con fotos reales, marca, número de serie, especificaciones y accesorios.
+- **Registro de Solicitud (HU-02):** Formulario dinámico con validaciones de negocio (Ambiente, Propósito y Duración de 1 a 8 horas).
+- **Equipos Frecuentes (HU-08):** Sistema de favoritos para un acceso rápido a las herramientas más utilizadas.
+- **Gestión de Perfil (HU-06):** Visualización de datos institucionales y actualización de información de contacto.
+- **Alertas Inteligentes (HU-14):** Notificaciones automáticas 15 minutos antes del vencimiento y avisos visuales críticos para préstamos vencidos.
 
----
-
-## 4. Alcance Funcional (Sprint Goal)
-El incremento actual cumple con el objetivo de permitir que un usuario consulte un equipo disponible y registre una solicitud válida, manteniendo la consistencia de datos.
-
-### Funcionalidades Implementadas:
-1. **Catálogo de Equipos:** Visualización de nombre, categoría y disponibilidad (accesible mediante texto e iconos).
-2. **Detalle del Equipo:** Consulta de información técnica y validación de estado (**RN-01**).
-3. **Registro de Solicitud:** Formulario dinámico con captura de ambiente, propósito y duración.
-4. **Validaciones Automáticas:** Implementación de reglas de negocio en tiempo real.
-5. **Mis Solicitudes:** Seguimiento del historial de préstamos y capacidad de cancelación (**RN-07**).
-6. **Manejo de Errores:** Control de identificadores inexistentes para evitar cierres abruptos (**RN-08**).
+### 🛠️ Para el Administrador (Módulo de Gestión)
+- **Dashboard Administrativo:** Panel centralizado para el control total del laboratorio.
+- **Gestión de Inventario (HU-09, HU-10):** Registro de nuevos equipos con validación de serie única y control de estados operativos (Mantenimiento/Baja).
+- **Aprobación de Solicitudes (HU-11):** Interfaz para aprobar o rechazar solicitudes con justificación obligatoria.
+- **Control de Devoluciones (HU-12, HU-13):** Registro de retorno de equipos con reporte de novedades y clasificación de daños (Leve, Moderado, Grave).
+- **Estadísticas y Reportes (HU-15):** Métricas sobre equipos más solicitados y demanda por categorías.
+- **Trazabilidad y Auditoría (HU-16):** Historial cronológico completo de cada equipo, asociando usuarios, fechas y novedades.
 
 ---
 
-## 5. Reglas de Negocio (RN)
-Se han implementado y verificado las siguientes reglas:
-- **RN-01:** Solo equipos en estado `DISPONIBLE` pueden ser solicitados.
-- **RN-02:** El campo Ambiente/Destino es obligatorio.
-- **RN-03:** El Propósito debe tener entre 10 y 180 caracteres.
-- **RN-04:** La duración estimada debe estar en el rango de 1 a 8 horas.
-- **RN-05:** Prevención de duplicados mediante control de estado en el ViewModel.
-- **RN-06:** Reserva automática: al solicitar, el equipo pasa de `DISPONIBLE` a `RESERVADO`.
-- **RN-09:** Uso exclusivo de datos sintéticos reproducibles.
+## 🛠️ Stack Tecnológico
+- **Lenguaje:** [Kotlin](https://kotlinlang.org/)
+- **UI Framework:** [Jetpack Compose](https://developer.android.com/jetpack/compose) (Moderno, declarativo y reactivo).
+- **Arquitectura:** MVVM (Model-View-ViewModel) con Flujo Unidireccional de Datos (UDF).
+- **Gestión de Estado:** `StateFlow` y `MutableStateFlow`.
+- **Navegación:** `Navigation Compose` con rutas seguras y manejo de argumentos.
+- **Inyección de Dependencias:** Factory Pattern para ViewModels.
+- **Multimedia:** [Coil](https://coil-kt.github.io/coil/) para la carga asíncrona de imágenes desde la web.
+- **Pruebas:** JUnit 4 y `kotlinx-coroutines-test`.
+- **SDK Objetivo:** 37 (Android 15).
 
 ---
 
-## 6. Gestión de Calidad y Pruebas
-Como **Scrum Master**, he velado por el cumplimiento de la **Definition of Done (DoD)** y la trazabilidad del proceso:
-
-- **Matriz de Trazabilidad:** Vinculación directa entre Historias de Usuario, Riesgos y Casos de Prueba.
-- **Suite de Pruebas:** Diseño y ejecución de 16 casos de prueba utilizando técnicas de **Caja Negra** (Partición de Equivalencia, Valores Límite y Transición de Estados).
-- **Pruebas Unitarias:** Verificación automatizada de las reglas de validación en el `PrestamoViewModel` (5/5 PASS).
-- **Accesibilidad:** Cumplimiento de estándares de contraste y comunicación multi-modal (no solo color).
+## 🔐 Seguridad y Acceso
+El sistema implementa un acceso restringido mediante **Correo Institucional (HU-05)**:
+- **Dominios permitidos:** `@soy.sena.edu.co` y `@sena.edu.co`.
+- **Roles:** El sistema detecta automáticamente si el usuario es Aprendiz o Administrador según las credenciales.
 
 ---
 
-## 7. Estructura de Paquetes
-```text
-com.example.prestamolabctma/
-├── model/         # Entidades del dominio y Enums de estado.
-├── data/          # Repositorios (Interfaz e Implementación InMemory).
-├── viewmodel/     # PrestamoViewModel y PrestamoUiState.
-├── ui/            # Pantallas Compose organizadas por funcionalidad.
-└── navigation/    # Configuración de rutas y grafos de navegación.
-```
+## 📦 Instalación y Ejecución
+1. Clonar el repositorio.
+2. Abrir el proyecto en **Android Studio Ladybug (2024.2.1)** o superior.
+3. Asegurarse de tener configurado el **JDK 17**.
+4. Ejecutar el Gradle Sync.
+5. Correr la aplicación en un emulador o dispositivo físico con acceso a internet.
 
 ---
 
-## 8. Evidencias de Calidad
-Los informes detallados se encuentran en la carpeta de artefactos del proyecto:
-- [Matriz de Trazabilidad](file:///C:/Users/Sena/AppData/Local/Google/AndroidStudio2026.1.3/projects/prestamolabctma.7c382d98/.artifacts/f202e8d3-70e2-4650-9ee5-32dc749b8535/trazabilidad.artifact.md)
-- [Suite de Pruebas](file:///C:/Users/Sena/AppData/Local/Google/AndroidStudio2026.1.3/projects/prestamolabctma.7c382d98/.artifacts/f202e8d3-70e2-4650-9ee5-32dc749b8535/suite_pruebas.artifact.md)
-- [Informe Ejecutivo de Calidad](file:///C:/Users/Sena/AppData/Local/Google/AndroidStudio2026.1.3/projects/prestamolabctma.7c382d98/.artifacts/f202e8d3-70e2-4650-9ee5-32dc749b8535/informe_calidad.artifact.md)
+## 👨‍🏫 Equipo y Supervisión
+- **Instructor:** Wilson Castro Gil
+- **Rol Responsable:** Scrum Master
+- **Metodología:** Ágil (Scrum) - Sprint Final verificado.
 
 ---
-*Este proyecto es un incremento funcional entregado como parte de la formación profesional integral del SENA.*
+*Este proyecto cumple satisfactoriamente con el Definition of Done (DoD) y los criterios de aceptación de las 16 Historias de Usuario oficiales.*
