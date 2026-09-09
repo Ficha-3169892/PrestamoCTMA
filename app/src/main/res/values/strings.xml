@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">PrestamoCTMA</string>
+    <string name="greeting_text">Hello %1$s!</string>
+    <string name="default_name">Android</string>
+    <string name="catalogo_title">Catálogo de Equipos</string>
+    <string name="mis_solicitudes_desc">Mis Solicitudes</string>
+    <string name="solicitar_prestamo_title">Solicitar Préstamo</string>
+    <string name="back_button_desc">Atrás</string>
+    <string name="equipo_no_encontrado">Equipo no encontrado</string>
+    <string name="equipo_label">Equipo: %1$s</string>
+    <string name="observaciones_label">Observaciones / Motivo</string>
+    <string name="confirmar_solicitud_button">Confirmar Solicitud</string>
+    <string name="no_solicitudes_msg">No tienes solicitudes registradas.</string>
+    <string name="desde_label">Desde: %1$s</string>
+    <string name="hasta_label">Hasta: %1$s</string>
+    <string name="cancelar_button">Cancelar</string>
+    <string name="vencida_banner_msg">Tienes %1$d solicitud(es) vencida(s). Por favor realiza la devolución.</string>
+    <string name="atencion_vence_poco">¡Atención! Vence en menos de 15 min</string>
+    <string name="vence_label">Vence: %1$s</string>
+    <string name="reportar_devolucion_button">Reportar Devolución</string>
+    <string name="devolucion_dialog_title">Reportar Novedad de Devolución</string>
+    <string name="novedad_field_label">Detalle de la novedad/daño</string>
+    <string name="confirm_button">Confirmar</string>
+</resources>
