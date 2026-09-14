@@ -1,5 +1,7 @@
 # PréstamoLab CTMA 📱🔬
 
+![Android CI](https://github.com/Ficha-3169892/PrestamoCTMA/actions/workflows/android.yml/badge.svg)
+
 **PréstamoLab CTMA** es una solución móvil integral desarrollada en Android para la gestión eficiente, segura y trazable del préstamo de equipos en los laboratorios del Centro de Tecnología de la Manufactura y el Desarrollo de la Automatización (CTMA).
 
 ## 🚀 Propósito del Proyecto
