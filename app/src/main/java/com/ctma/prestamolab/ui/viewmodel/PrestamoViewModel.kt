@@ -44,7 +44,7 @@ class PrestamoViewModel(
             _uiState.update {
                 it.copy(
                     erroresSolicitud = errores,
-                    mensaje = "Revisa los campos marcados antes de guardar."
+                    mensaje = "Revisa los campos marcados antes de guardar.",
                 )
             }
             return
