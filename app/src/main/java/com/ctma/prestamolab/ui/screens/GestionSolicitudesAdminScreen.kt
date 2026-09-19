@@ -13,11 +13,12 @@ import androidx.compose.ui.unit.dp
 import com.ctma.prestamolab.model.Equipo
 import com.ctma.prestamolab.model.EstadoSolicitud
 import com.ctma.prestamolab.model.SolicitudPrestamo
+import com.ctma.prestamolab.ui.state.ListadoUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GestionSolicitudesAdminScreen(
-    solicitudes: List<SolicitudPrestamo>,
+    solicitudesState: ListadoUiState<SolicitudPrestamo>,
     equipos: List<Equipo>,
     onAprobar: (Int) -> Unit,
     onRechazar: (Int, String) -> Unit,
@@ -42,29 +43,42 @@ fun GestionSolicitudesAdminScreen(
             )
         }
     ) { padding ->
-        if (solicitudes.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No hay solicitudes para gestionar.")
+        when (solicitudesState) {
+            is ListadoUiState.Cargando -> {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.padding(padding).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(solicitudes) { sol ->
-                    val equipo = equipos.firstOrNull { it.id == sol.equipoId }
-                    SolicitudAdminCard(
-                        solicitud = sol,
-                        equipoNombre = equipo?.nombre ?: "Desconocido",
-                        onAprobar = { onAprobar(sol.id) },
-                        onRechazar = {
+            is ListadoUiState.Vacio -> {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    Text("No hay solicitudes para gestionar.")
+                }
+            }
+            is ListadoUiState.Error -> {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    Text("Error: ${solicitudesState.mensaje}", color = MaterialTheme.colorScheme.error)
+                }
+            }
+            is ListadoUiState.Contenido -> {
+                LazyColumn(
+                    modifier = Modifier.padding(padding).fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(solicitudesState.datos) { sol ->
+                        val equipo = equipos.firstOrNull { it.id == sol.equipoId }
+                        SolicitudAdminCard(
+                            solicitud = sol,
+                            equipoNombre = equipo?.nombre ?: "Desconocido",
+                            onAprobar = { onAprobar(sol.id) },
+                            onRechazar = {
+                                solicitudAAccion = sol
+                                mostrarDialogoRechazo = true
+                            }
+                        ) {
                             solicitudAAccion = sol
-                            mostrarDialogoRechazo = true
+                            mostrarDialogoDevolucion = true
                         }
-                    ) {
-                        solicitudAAccion = sol
-                        mostrarDialogoDevolucion = true
                     }
                 }
             }

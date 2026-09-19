@@ -5,12 +5,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -18,29 +15,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ctma.prestamolab.ui.navigation.Rutas
-import com.ctma.prestamolab.ui.screens.CatalogoScreen
-import com.ctma.prestamolab.ui.screens.EquipoDetalleScreen
-import com.ctma.prestamolab.ui.screens.EstadisticasScreen
-import com.ctma.prestamolab.ui.screens.GestionSolicitudesAdminScreen
-import com.ctma.prestamolab.ui.screens.InventarioScreen
-import com.ctma.prestamolab.ui.screens.LoginScreen
-import com.ctma.prestamolab.ui.screens.MisSolicitudesScreen
-import com.ctma.prestamolab.ui.screens.PerfilScreen
-import com.ctma.prestamolab.ui.screens.SolicitarScreen
-import com.ctma.prestamolab.ui.screens.SolicitudDetalleScreen
-import com.ctma.prestamolab.ui.screens.TrazabilidadScreen
+import com.ctma.prestamolab.ui.screens.*
 import com.ctma.prestamolab.ui.viewmodel.AuthViewModel
 import com.ctma.prestamolab.ui.viewmodel.PrestamoViewModel
 
+/**
+ * [HU General] Orquestador de navegación y flujo principal.
+ * Integra los módulos de Aprendiz y Administración (Semana 07).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrestamoLabApp(
     viewModel: PrestamoViewModel = viewModel(),
-    authViewModel: AuthViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel()
 ) {
     val navController = rememberNavController()
-    val uiState by viewModel.uiState.collectAsState()
-    val authState by authViewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.mensaje, authState.mensaje) {
@@ -53,7 +44,7 @@ fun PrestamoLabApp(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         if (authState.usuario == null) {
             LoginScreen(
@@ -61,7 +52,6 @@ fun PrestamoLabApp(
                 onLogin = { correo, pass -> authViewModel.iniciarSesion(correo, pass) },
             )
         } else {
-            val esAdmin = authState.usuario?.esAdministrador ?: false
             NavHost(
                 navController = navController,
                 startDestination = Rutas.CATALOGO,
@@ -69,10 +59,10 @@ fun PrestamoLabApp(
             ) {
                 composable(Rutas.CATALOGO) {
                     CatalogoScreen(
-                        equipos = uiState.equiposFiltrados,
+                        equiposState = uiState.equiposState,
                         busqueda = uiState.busqueda,
                         categoriaSeleccionada = uiState.categoriaSeleccionada,
-                        esAdministrador = esAdmin,
+                        esAdministrador = authState.usuario?.esAdministrador ?: false,
                         onBusquedaChange = { viewModel.buscar(it) },
                         onCategoriaChange = { viewModel.filtrarPorCategoria(it) },
                         onEquipoClick = { navController.navigate(Rutas.equipoDetalle(it)) },
@@ -84,6 +74,15 @@ fun PrestamoLabApp(
                     ) { viewModel.conmutarFavorito(it) }
                 }
 
+                composable(Rutas.PERFIL) {
+                    PerfilScreen(
+                        usuario = authState.usuario,
+                        onBack = { navController.popBackStack() },
+                        onActualizar = { tel, correo -> authViewModel.actualizarContacto(tel, correo) },
+                        onCerrarSesion = { authViewModel.cerrarSesion() },
+                    )
+                }
+
                 composable(Rutas.INVENTARIO) {
                     InventarioScreen(
                         onAgregarEquipo = { viewModel.agregarEquipo(it) { navController.popBackStack() } },
@@ -93,7 +92,7 @@ fun PrestamoLabApp(
 
                 composable(Rutas.GESTION_ADMIN) {
                     GestionSolicitudesAdminScreen(
-                        solicitudes = uiState.solicitudes,
+                        solicitudesState = uiState.solicitudesState,
                         equipos = uiState.equipos,
                         onAprobar = { viewModel.aprobarSolicitud(it) },
                         onRechazar = { id, jus -> viewModel.rechazarSolicitud(id, jus) },
@@ -110,35 +109,13 @@ fun PrestamoLabApp(
                 }
 
                 composable(
-                    route = Rutas.TRAZABILIDAD,
-                    arguments = listOf(navArgument("equipoId") { type = NavType.IntType })
-                ) { entry ->
-                    val equipoId = entry.arguments?.getInt("equipoId") ?: -1
-                    LaunchedEffect(equipoId) { viewModel.cargarTrazabilidad(equipoId) }
-                    TrazabilidadScreen(
-                        equipo = viewModel.obtenerEquipo(equipoId),
-                        historial = uiState.trazabilidad,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(Rutas.PERFIL) {
-                    PerfilScreen(
-                        usuario = authState.usuario,
-                        onBack = { navController.popBackStack() },
-                        onActualizar = { tel, correo -> authViewModel.actualizarContacto(tel, correo) },
-                        onCerrarSesion = { authViewModel.cerrarSesion() },
-                    )
-                }
-
-                composable(
                     route = Rutas.EQUIPO_DETALLE,
                     arguments = listOf(navArgument("equipoId") { type = NavType.IntType })
                 ) { entry ->
                     val equipoId = entry.arguments?.getInt("equipoId") ?: -1
                     EquipoDetalleScreen(
                         equipo = viewModel.obtenerEquipo(equipoId),
-                        esAdministrador = esAdmin,
+                        esAdministrador = authState.usuario?.esAdministrador ?: false,
                         onBack = { navController.popBackStack() },
                         onSolicitarClick = { navController.navigate(Rutas.solicitar(equipoId)) },
                         onTrazabilidadClick = { navController.navigate(Rutas.trazabilidad(equipoId)) }
@@ -167,10 +144,23 @@ fun PrestamoLabApp(
 
                 composable(Rutas.MIS_SOLICITUDES) {
                     MisSolicitudesScreen(
-                        solicitudes = uiState.solicitudes,
+                        solicitudesState = uiState.solicitudesState,
                         equipos = uiState.equipos,
                         onBack = { navController.popBackStack() },
                         onSolicitudClick = { navController.navigate(Rutas.solicitudDetalle(it)) }
+                    )
+                }
+
+                composable(
+                    route = Rutas.TRAZABILIDAD,
+                    arguments = listOf(navArgument("equipoId") { type = NavType.IntType })
+                ) { entry ->
+                    val equipoId = entry.arguments?.getInt("equipoId") ?: -1
+                    LaunchedEffect(equipoId) { viewModel.cargarTrazabilidad(equipoId) }
+                    TrazabilidadScreen(
+                        equipo = viewModel.obtenerEquipo(equipoId),
+                        historialState = uiState.trazabilidadState,
+                        onBack = { navController.popBackStack() }
                     )
                 }
 

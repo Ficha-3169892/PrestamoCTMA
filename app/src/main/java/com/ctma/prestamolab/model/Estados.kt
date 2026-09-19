@@ -1,5 +1,8 @@
 package com.ctma.prestamolab.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class CategoriaEquipo {
     ELECTRONICA,
     REDES,
@@ -9,6 +12,7 @@ enum class CategoriaEquipo {
     PERIFERICO,
 }
 
+@Serializable
 enum class EstadoEquipo {
     DISPONIBLE,
     RESERVADO,
@@ -18,6 +22,7 @@ enum class EstadoEquipo {
 }
 
 @Suppress("unused")
+@Serializable
 enum class EstadoSolicitud {
     SOLICITADA,
     APROBADA,

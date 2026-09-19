@@ -1,27 +1,61 @@
 package com.ctma.prestamolab.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.ctma.prestamolab.data.ServiceLocator
 import com.ctma.prestamolab.data.repository.PrestamoRepository
-import com.ctma.prestamolab.domain.ErroresSolicitud
 import com.ctma.prestamolab.domain.validarSolicitud
 import com.ctma.prestamolab.model.CategoriaEquipo
 import com.ctma.prestamolab.model.Equipo
 import com.ctma.prestamolab.model.SolicitudPrestamo
+import com.ctma.prestamolab.ui.state.ListadoUiState
 import com.ctma.prestamolab.ui.state.PrestamoUiState
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
+/**
+ * [HU General] ViewModel unificado para la gestión de préstamos.
+ * Implementa Estado Reactivo y Búsqueda Pro (Semana 07).
+ */
 class PrestamoViewModel(
     private val repository: PrestamoRepository = ServiceLocator.repository,
 ) : ViewModel() {
+
     private val _uiState = MutableStateFlow(PrestamoUiState())
     val uiState: StateFlow<PrestamoUiState> = _uiState.asStateFlow()
 
     init {
-        refrescarDatos()
+        // [Semana 07] Recolección reactiva de datos desde SSOT con Búsqueda Pro
+        observarEquiposPro()
+        observarSolicitudes()
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    private fun observarEquiposPro() {
+        // [Semana 07] Búsqueda Pro: flatMapLatest para cancelar consultas obsoletas
+        _uiState
+            .map { it.busqueda }
+            .distinctUntilChanged()
+            .debounce(300)
+            .flatMapLatest { query -> repository.observarEquipos(query) }
+            .onEach { equipos ->
+                _uiState.update { 
+                    it.copy(equiposState = if (equipos.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(equipos))
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observarSolicitudes() {
+        repository.observarSolicitudes()
+            .onEach { solicitudes ->
+                _uiState.update { 
+                    it.copy(solicitudesState = if (solicitudes.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(solicitudes))
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun obtenerEquipo(id: Int): Equipo? = uiState.value.equipos.firstOrNull { it.id == id }
@@ -50,31 +84,24 @@ class PrestamoViewModel(
             return
         }
 
-        _uiState.update { it.copy(guardando = true, erroresSolicitud = ErroresSolicitud()) }
-
-        repository.crearSolicitud(
-            equipoId = equipoId,
-            ambienteDestino = ambienteDestino,
-            proposito = proposito,
-            duracionHoras = duracion ?: 0
-        ).onSuccess { solicitud ->
-            refrescarDatos("Solicitud registrada. El equipo quedó reservado.")
-            alCrear(solicitud.id)
-        }.onFailure { error ->
-            refrescarDatos(error.message ?: "No fue posible crear la solicitud.")
+        viewModelScope.launch {
+            _uiState.update { it.copy(guardando = true) }
+            repository.crearSolicitud(equipoId, ambienteDestino, proposito, duracion ?: 0)
+                .onSuccess { id ->
+                    _uiState.update { it.copy(mensaje = "Solicitud enviada con éxito", guardando = false) }
+                    alCrear(id.toInt())
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(mensaje = error.message, guardando = false) }
+                }
         }
-
-        _uiState.update { it.copy(guardando = false) }
     }
 
-    fun cancelarSolicitud(id: Int) {
-        repository.cancelarSolicitud(id)
-            .onSuccess { refrescarDatos("Solicitud cancelada. La disponibilidad fue actualizada.") }
-            .onFailure { error -> refrescarDatos(error.message ?: "No fue posible cancelar la solicitud.") }
-    }
-
-    fun limpiarMensaje() {
-        _uiState.update { it.copy(mensaje = null) }
+    fun conmutarFavorito(equipoId: Int) {
+        viewModelScope.launch {
+            repository.conmutarFavorito(equipoId)
+            // No es necesario refrescar manualmente, el Flow observador lo hará automáticamente (SSOT)
+        }
     }
 
     fun buscar(texto: String) {
@@ -85,53 +112,43 @@ class PrestamoViewModel(
         _uiState.update { it.copy(categoriaSeleccionada = categoria) }
     }
 
-    fun conmutarFavorito(equipoId: Int) {
-        repository.conmutarFavorito(equipoId).onSuccess {
-            refrescarDatos()
-        }
-    }
-
     fun agregarEquipo(equipo: Equipo, alTerminar: () -> Unit) {
-        repository.agregarEquipo(equipo)
-            .onSuccess {
-                refrescarDatos("Equipo agregado al inventario.")
-                alTerminar()
-            }
-            .onFailure { error ->
-                refrescarDatos(error.message ?: "Error al agregar equipo.")
-            }
+        viewModelScope.launch {
+            repository.agregarEquipo(equipo)
+                .onSuccess { alTerminar() }
+        }
     }
 
     fun aprobarSolicitud(id: Int) {
-        repository.aprobarSolicitud(id)
-            .onSuccess { refrescarDatos("Solicitud aprobada y equipo entregado.") }
-            .onFailure { error -> refrescarDatos(error.message ?: "No se pudo aprobar.") }
+        viewModelScope.launch { repository.aprobarSolicitud(id) }
     }
 
     fun rechazarSolicitud(id: Int, justificacion: String) {
-        repository.rechazarSolicitud(id, justificacion)
-            .onSuccess { refrescarDatos("Solicitud rechazada.") }
-            .onFailure { error -> refrescarDatos(error.message ?: "No se pudo rechazar.") }
+        viewModelScope.launch { repository.rechazarSolicitud(id, justificacion) }
     }
 
     fun devolverEquipo(solicitudId: Int, novedades: String?) {
-        repository.devolverEquipo(solicitudId, novedades)
-            .onSuccess { refrescarDatos("Equipo devuelto y solicitud cerrada.") }
-            .onFailure { error -> refrescarDatos(error.message ?: "Error en la devolución.") }
+        viewModelScope.launch { repository.devolverEquipo(solicitudId, novedades) }
     }
 
     fun cargarTrazabilidad(equipoId: Int) {
-        _uiState.update { it.copy(trazabilidad = repository.obtenerTrazabilidad(equipoId)) }
+        repository.observarTrazabilidad(equipoId)
+            .onEach { trazabilidad ->
+                _uiState.update { 
+                    it.copy(trazabilidadState = if (trazabilidad.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(trazabilidad))
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
-    private fun refrescarDatos(mensaje: String? = uiState.value.mensaje) {
-        _uiState.update {
-            it.copy(
-                equipos = repository.obtenerEquipos(),
-                solicitudes = repository.obtenerSolicitudes(),
-                estadisticas = repository.obtenerEstadisticas(),
-                mensaje = mensaje
-            )
+    fun cancelarSolicitud(id: Int) {
+        viewModelScope.launch {
+            repository.cancelarSolicitud(id)
+                .onFailure { error -> _uiState.update { it.copy(mensaje = error.message) } }
         }
+    }
+
+    fun limpiarMensaje() {
+        _uiState.update { it.copy(mensaje = null) }
     }
 }

@@ -7,16 +7,25 @@ import com.ctma.prestamolab.model.EstadoEquipo
 import com.ctma.prestamolab.model.SolicitudPrestamo
 
 data class PrestamoUiState(
-    val equipos: List<Equipo> = emptyList(),
-    val solicitudes: List<SolicitudPrestamo> = emptyList(),
+    val equiposState: ListadoUiState<Equipo> = ListadoUiState.Cargando,
+    val solicitudesState: ListadoUiState<SolicitudPrestamo> = ListadoUiState.Cargando,
+    val trazabilidadState: ListadoUiState<SolicitudPrestamo> = ListadoUiState.Vacio,
     val mensaje: String? = null,
     val guardando: Boolean = false,
     val erroresSolicitud: ErroresSolicitud = ErroresSolicitud(),
     val busqueda: String = "",
     val categoriaSeleccionada: CategoriaEquipo? = null,
     val estadisticas: Map<String, Int> = emptyMap(),
-    val trazabilidad: List<SolicitudPrestamo> = emptyList(),
 ) {
+    // Para compatibilidad temporal con lógica existente durante la migración
+    val equipos: List<Equipo>
+        get() = (equiposState as? ListadoUiState.Contenido)?.datos ?: emptyList()
+
+    val solicitudes: List<SolicitudPrestamo>
+        get() = (solicitudesState as? ListadoUiState.Contenido)?.datos ?: emptyList()
+
+    val trazabilidad: List<SolicitudPrestamo>
+        get() = (trazabilidadState as? ListadoUiState.Contenido)?.datos ?: emptyList()
     val equiposFiltrados: List<Equipo>
         get() = equipos.filter { equipo ->
             val esPublico = (equipo.estado != EstadoEquipo.MANTENIMIENTO) && 

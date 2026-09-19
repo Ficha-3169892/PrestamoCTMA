@@ -7,10 +7,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ctma.prestamolab.model.Equipo
 import com.ctma.prestamolab.model.SolicitudPrestamo
+import com.ctma.prestamolab.ui.state.ListadoUiState
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -18,7 +20,7 @@ import java.util.*
 @Composable
 fun TrazabilidadScreen(
     equipo: Equipo?,
-    historial: List<SolicitudPrestamo>,
+    historialState: ListadoUiState<SolicitudPrestamo>,
     onBack: () -> Unit,
 ) {
     val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
@@ -42,7 +44,9 @@ fun TrazabilidadScreen(
                 .fillMaxSize()
         ) {
             if (equipo == null) {
-                Text("Cargando información del equipo...")
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             } else {
                 Text(equipo.nombre, style = MaterialTheme.typography.headlineSmall)
                 Text("Serie: ${equipo.serie}", style = MaterialTheme.typography.bodyMedium)
@@ -51,26 +55,29 @@ fun TrazabilidadScreen(
                 Text("Historial de Movimientos", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                if (historial.isEmpty()) {
-                    Text("Este equipo no tiene historial de préstamos.")
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(historial) { sol ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            ) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Text(
-                                        "Fecha: ${dateFormat.format(Date(sol.fechaCreacion))}",
-                                        style = MaterialTheme.typography.labelSmall
+                when (historialState) {
+                    is ListadoUiState.Cargando -> CircularProgressIndicator()
+                    is ListadoUiState.Vacio -> Text("Este equipo no tiene historial de préstamos.")
+                    is ListadoUiState.Error -> Text("Error: ${historialState.mensaje}")
+                    is ListadoUiState.Contenido -> {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(historialState.datos) { sol ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                                     )
-                                    Text("Estado Final: ${sol.estado}")
-                                    Text("Propósito: ${sol.proposito}")
-                                    if (!sol.novedades.isNullOrBlank()) {
-                                        Text("Novedades: ${sol.novedades}", color = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Text(
+                                            "Fecha: ${dateFormat.format(Date(sol.fechaCreacion))}",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                        Text("Estado Final: ${sol.estado}")
+                                        Text("Propósito: ${sol.proposito}")
+                                        if (!sol.novedades.isNullOrBlank()) {
+                                            Text("Novedades: ${sol.novedades}", color = MaterialTheme.colorScheme.error)
+                                        }
                                     }
                                 }
                             }
