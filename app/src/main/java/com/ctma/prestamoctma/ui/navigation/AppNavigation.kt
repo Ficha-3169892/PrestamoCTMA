@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.ctma.prestamoctma.ui.screens.AgregarEquipoScreen
 import com.ctma.prestamoctma.ui.screens.CatalogoScreen
 import com.ctma.prestamoctma.ui.screens.MisSolicitudesScreen
 import com.ctma.prestamoctma.ui.screens.SolicitarScreen
@@ -22,22 +23,27 @@ sealed class Screen(val route: String) {
         fun createRoute(equipoId: String) = "solicitar/$equipoId"
     }
     data object MisSolicitudes : Screen("mis_solicitudes")
+    data object AgregarEquipo : Screen("agregar_equipo")
 }
 
 @Composable
 fun AppNavigation(
     modifier: Modifier = Modifier,
-    viewModel: PrestamoViewModel = viewModel()
+    viewModel: PrestamoViewModel = viewModel(factory = PrestamoViewModel.Factory)
 ) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.isSolicitudExitosa) {
+    LaunchedEffect(uiState.isSolicitudExitosa, uiState.isEquipoAgregadoExitosamente) {
         if (uiState.isSolicitudExitosa) {
             navController.navigate(Screen.MisSolicitudes.route) {
                 popUpTo(Screen.Catalogo.route)
             }
             viewModel.resetSolicitudExitosa()
+        }
+        if (uiState.isEquipoAgregadoExitosamente) {
+            navController.popBackStack()
+            viewModel.resetEquipoAgregadoExitosamente()
         }
     }
 
@@ -57,6 +63,23 @@ fun AppNavigation(
                 onVerSolicitudes = {
                     navController.navigate(Screen.MisSolicitudes.route)
                 },
+                onAgregarEquipo = {
+                    navController.navigate(Screen.AgregarEquipo.route)
+                },
+                onDismissError = { viewModel.clearError() }
+            )
+        }
+        
+        composable(Screen.AgregarEquipo.route) {
+            AgregarEquipoScreen(
+                onAgregar = { nombre, cat, desc ->
+                    viewModel.agregarEquipo(nombre, cat, desc)
+                },
+                onBack = { 
+                    viewModel.clearError()
+                    navController.popBackStack() 
+                },
+                error = uiState.error,
                 onDismissError = { viewModel.clearError() }
             )
         }

@@ -21,4 +21,10 @@
     <string name="devolucion_dialog_title">Reportar Novedad de Devolución</string>
     <string name="novedad_field_label">Detalle de la novedad/daño</string>
     <string name="confirm_button">Confirmar</string>
+    <string name="agregar_equipo_title">Agregar Nuevo Equipo</string>
+    <string name="nombre_equipo_label">Nombre del Equipo</string>
+    <string name="categoria_label">Categoría</string>
+    <string name="descripcion_label">Descripción</string>
+    <string name="guardar_equipo_button">Guardar Equipo</string>
+    <string name="agregar_equipo_fab_desc">Agregar equipo</string>
 </resources>

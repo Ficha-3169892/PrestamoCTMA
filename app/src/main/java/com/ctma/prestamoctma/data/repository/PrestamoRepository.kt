@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.Flow
 interface PrestamoRepository {
     fun getEquipos(): Flow<List<Equipo>>
     fun getSolicitudes(): Flow<List<SolicitudPrestamo>>
-    fun getEquipoById(id: String): Equipo?
+    fun getSolicitudesByUsuario(usuarioId: String): Flow<List<SolicitudPrestamo>>
+    suspend fun getEquipoById(id: String): Equipo?
+    suspend fun getSolicitudById(id: String): SolicitudPrestamo?
     suspend fun registrarSolicitud(solicitud: SolicitudPrestamo): Result<Unit>
     suspend fun cancelarSolicitud(id: String): Result<Unit>
     suspend fun procesarDevolucion(
@@ -16,4 +18,5 @@ interface PrestamoRepository {
         novedadDetalle: String?,
         gravedad: GravedadDano
     ): Result<Unit>
+    suspend fun agregarEquipo(equipo: Equipo): Result<Unit>
 }

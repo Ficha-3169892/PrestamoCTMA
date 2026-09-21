@@ -1,8 +1,13 @@
 package com.ctma.prestamoctma.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import com.ctma.prestamoctma.data.repository.InMemoryPrestamoRepository
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.ctma.prestamoctma.PrestamoApplication
+import com.ctma.prestamoctma.data.local.datastore.PreferenciasRepository
 import com.ctma.prestamoctma.data.repository.PrestamoRepository
 import com.ctma.prestamoctma.model.*
 import com.ctma.prestamoctma.util.Validaciones
@@ -10,9 +15,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.time.Duration.Companion.minutes
 
 class PrestamoViewModel(
-    private val repository: PrestamoRepository = InMemoryPrestamoRepository()
+    private val repository: PrestamoRepository,
+    private val preferenciasRepository: PreferenciasRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrestamoUiState())
@@ -33,16 +40,25 @@ class PrestamoViewModel(
             
             combine(
                 repository.getEquipos(),
-                repository.getSolicitudes()
-            ) { equipos, solicitudes ->
+                repository.getSolicitudes(),
+                preferenciasRepository.filtroEstado
+            ) { equipos, solicitudes, filtro ->
                 _uiState.update { 
                     it.copy(
                         equipos = equipos,
                         solicitudes = solicitudes,
+                        filtroEstado = filtro,
                         isLoading = false
                     )
                 }
             }.collect()
+        }
+    }
+
+    @Suppress("unused")
+    fun actualizarFiltro(estado: EstadoSolicitud?) {
+        viewModelScope.launch {
+            preferenciasRepository.guardarFiltroEstado(estado)
         }
     }
 
@@ -59,7 +75,7 @@ class PrestamoViewModel(
                     _uiState.update { it.copy(error = "Recordatorio: El préstamo de $nombres vence en menos de 15 minutos.") }
                     porVencer.forEach { _vencimientosAlertados.add(it.id) }
                 }
-                delay(60000) // Verificar cada minuto
+                delay(1.minutes) // Verificar cada minuto
             }
         }
     }
@@ -147,5 +163,49 @@ class PrestamoViewModel(
 
     fun resetSolicitudExitosa() {
         _uiState.update { it.copy(isSolicitudExitosa = false) }
+    }
+
+    fun agregarEquipo(
+        nombre: String,
+        categoria: CategoriaEquipo,
+        descripcion: String
+    ) {
+        if (nombre.isBlank()) {
+            _uiState.update { it.copy(error = "El nombre es obligatorio") }
+            return
+        }
+
+        viewModelScope.launch {
+            val nuevoEquipo = Equipo(
+                id = UUID.randomUUID().toString(),
+                nombre = nombre,
+                categoria = categoria,
+                estado = EstadoEquipo.DISPONIBLE,
+                descripcion = descripcion
+            )
+            repository.agregarEquipo(nuevoEquipo)
+                .onSuccess {
+                    _uiState.update { it.copy(isEquipoAgregadoExitosamente = true, error = null) }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(error = e.message) }
+                }
+        }
+    }
+
+    fun resetEquipoAgregadoExitosamente() {
+        _uiState.update { it.copy(isEquipoAgregadoExitosamente = false) }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = (this[APPLICATION_KEY] as PrestamoApplication)
+                PrestamoViewModel(
+                    repository = application.container.prestamoRepository,
+                    preferenciasRepository = application.container.preferenciasRepository
+                )
+            }
+        }
     }
 }

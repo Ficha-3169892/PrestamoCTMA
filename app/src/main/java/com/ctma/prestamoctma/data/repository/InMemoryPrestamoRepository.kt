@@ -4,10 +4,11 @@ import com.ctma.prestamoctma.model.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.util.Calendar
-import java.util.Date
 
+@Suppress("unused")
 class InMemoryPrestamoRepository : PrestamoRepository {
     private val _equipos = MutableStateFlow(
         listOf(
@@ -19,9 +20,8 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         )
     )
 
-    private val _solicitudes = MutableStateFlow<List<SolicitudPrestamo>>(
+    private val _solicitudes = MutableStateFlow(
         listOf(
-            // 1. Solicitud VENCIDA (hace 10 horas) -> Banner Rojo
             SolicitudPrestamo(
                 id = "TEST-VENCIDA",
                 equipoId = "E005",
@@ -33,7 +33,6 @@ class InMemoryPrestamoRepository : PrestamoRepository {
                 fechaSolicitud = Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, -10) }.time,
                 estado = EstadoSolicitud.SOLICITADA
             ),
-            // 2. Solicitud POR VENCER (vence en 5 minutos) -> Tarjeta Amarilla y Snackbar
             SolicitudPrestamo(
                 id = "TEST-POR-VENCER",
                 equipoId = "E001",
@@ -43,7 +42,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
                 proposito = "Exposición proyecto",
                 duracionHoras = 1,
                 fechaSolicitud = Calendar.getInstance().apply { 
-                    add(Calendar.MINUTE, -55) // Solicitado hace 55 min, duración 1h = vence en 5 min
+                    add(Calendar.MINUTE, -55) 
                 }.time,
                 estado = EstadoSolicitud.SOLICITADA
             )
@@ -51,8 +50,15 @@ class InMemoryPrestamoRepository : PrestamoRepository {
     )
 
     override fun getEquipos(): Flow<List<Equipo>> = _equipos.asStateFlow()
+    
     override fun getSolicitudes(): Flow<List<SolicitudPrestamo>> = _solicitudes.asStateFlow()
-    override fun getEquipoById(id: String): Equipo? = _equipos.value.find { it.id == id }
+    
+    override fun getSolicitudesByUsuario(usuarioId: String): Flow<List<SolicitudPrestamo>> = 
+        _solicitudes.asStateFlow().map { list -> list.filter { it.usuarioId == usuarioId } }
+
+    override suspend fun getEquipoById(id: String): Equipo? = _equipos.value.find { it.id == id }
+    
+    override suspend fun getSolicitudById(id: String): SolicitudPrestamo? = _solicitudes.value.find { it.id == id }
 
     override suspend fun registrarSolicitud(solicitud: SolicitudPrestamo): Result<Unit> {
         val equipo = getEquipoById(solicitud.equipoId)
@@ -65,7 +71,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
     override suspend fun cancelarSolicitud(id: String): Result<Unit> {
         val solicitud = _solicitudes.value.find { it.id == id }
-        return if (solicitud != null && solicitud.estado == EstadoSolicitud.SOLICITADA) {
+        return if (solicitud != null && (solicitud.estado == EstadoSolicitud.SOLICITADA || solicitud.estado == EstadoSolicitud.APROBADA)) {
             _solicitudes.update { list ->
                 list.map { if (it.id == id) it.copy(estado = EstadoSolicitud.CANCELADA) else it }
             }
@@ -88,5 +94,10 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
     private fun actualizarEstadoEquipo(equipoId: String, nuevoEstado: EstadoEquipo) {
         _equipos.update { list -> list.map { if (it.id == equipoId) it.copy(estado = nuevoEstado) else it } }
+    }
+
+    override suspend fun agregarEquipo(equipo: Equipo): Result<Unit> {
+        _equipos.update { it + equipo }
+        return Result.success(Unit)
     }
 }

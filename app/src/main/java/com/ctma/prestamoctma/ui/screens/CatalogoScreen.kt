@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ fun CatalogoScreen(
     error: String?,
     onEquipoClick: (Equipo) -> Unit,
     onVerSolicitudes: () -> Unit,
+    onAgregarEquipo: () -> Unit,
     onDismissError: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -64,6 +66,14 @@ fun CatalogoScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAgregarEquipo) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.agregar_equipo_fab_desc)
+                )
+            }
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {

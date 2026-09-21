@@ -6,7 +6,7 @@ import com.ctma.prestamoctma.util.Validaciones
 import org.junit.Assert.*
 import org.junit.Test
 
-class PrestamoLogicTest {
+class  PrestamoLogicTest {
 
     // --- PRUEBAS DE VALIDACIÓN (REGLAS DE NEGOCIO) ---
 
