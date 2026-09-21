@@ -1,5 +1,6 @@
 package com.ctma.prestamoctma.ui.viewmodel
 
+import com.ctma.prestamoctma.data.local.entities.EvidenciaEntity
 import com.ctma.prestamoctma.model.Equipo
 import com.ctma.prestamoctma.model.SolicitudPrestamo
 import com.ctma.prestamoctma.model.EstadoSolicitud
@@ -10,6 +11,7 @@ import com.ctma.prestamoctma.model.EstadoSolicitud
 data class PrestamoUiState(
     val listadoSolicitudes: ListadoUiState<SolicitudPrestamo> = ListadoUiState.Cargando,
     val listadoEquipos: ListadoUiState<Equipo> = ListadoUiState.Cargando,
+    val evidenciasPorPrestamo: Map<String, List<EvidenciaEntity>> = emptyMap(),
     val filtroEstado: EstadoSolicitud? = null,
     val searchQuery: String = "",
     val isRefreshing: Boolean = false,

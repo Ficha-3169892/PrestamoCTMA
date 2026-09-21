@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ctma.prestamoctma.PrestamoApplication
 import com.ctma.prestamoctma.data.local.datastore.PreferenciasRepository
+import com.ctma.prestamoctma.data.local.entities.EvidenciaEntity
+import com.ctma.prestamoctma.data.local.entities.UploadStatus
 import com.ctma.prestamoctma.data.repository.PrestamoRepository
 import com.ctma.prestamoctma.model.*
 import com.ctma.prestamoctma.util.Validaciones
@@ -36,7 +38,8 @@ class PrestamoViewModel(
         preferenciasRepository.filtroEstado,
         _operacionEstado,
         _errorMensaje,
-        _isRefreshing
+        _isRefreshing,
+        repository.getAllEvidencias()
     ) { flows ->
         val equipos = flows[0] as List<Equipo>
         val query = flows[1] as String
@@ -44,10 +47,14 @@ class PrestamoViewModel(
         val operacion = flows[3] as OperacionUiState
         val error = flows[4] as String?
         val refreshing = flows[5] as Boolean
+        val evidencias = flows[6] as List<EvidenciaEntity>
         
-        Triple(equipos, query, filtro) to (Triple(operacion, error, refreshing))
-    }.flatMapLatest { (data, status) ->
+        val mapEvidencias = evidencias.groupBy { it.prestamoId }
+        
+        Triple(equipos, query, filtro) to (Triple(operacion, error, refreshing) to mapEvidencias)
+    }.flatMapLatest { (data, statusPair) ->
         val (equipos, query, filtro) = data
+        val (status, mapEvidencias) = statusPair
         val (operacion, error, refreshing) = status
         
         repository.getSolicitudes().map { solicitudes ->
@@ -59,6 +66,7 @@ class PrestamoViewModel(
             PrestamoUiState(
                 listadoEquipos = if (equipos.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(equipos),
                 listadoSolicitudes = if (filtradas.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(filtradas),
+                evidenciasPorPrestamo = mapEvidencias,
                 filtroEstado = filtro,
                 searchQuery = query,
                 isRefreshing = refreshing,
@@ -162,7 +170,10 @@ class PrestamoViewModel(
         viewModelScope.launch {
             _operacionEstado.value = OperacionUiState.Ejecutando
             repository.cancelarSolicitud(id)
-                .onSuccess { _operacionEstado.value = OperacionUiState.Exito }
+                .onSuccess { 
+                    _operacionEstado.value = OperacionUiState.Exito 
+                    refreshData() // Refresca los datos para actualizar la UI inmediatamente
+                }
                 .onFailure { e ->
                     _operacionEstado.value = OperacionUiState.Fallo(e.message ?: "Error")
                     _errorMensaje.value = e.message
@@ -225,6 +236,33 @@ class PrestamoViewModel(
                 .onFailure { e ->
                     _operacionEstado.value = OperacionUiState.Fallo(e.message ?: "Error")
                     _errorMensaje.value = e.message
+                }
+        }
+    }
+
+    fun guardarEvidencia(prestamoId: String, uri: String, size: Long, type: String) {
+        // Validaciones: max 5MB, solo imágenes
+        if (size > 5 * 1024 * 1024) {
+            _errorMensaje.value = "La imagen no debe superar los 5MB"
+            return
+        }
+        if (!type.startsWith("image/")) {
+            _errorMensaje.value = "Solo se permiten imágenes"
+            return
+        }
+
+        viewModelScope.launch {
+            val evidencia = EvidenciaEntity(
+                id = UUID.randomUUID().toString(),
+                prestamoId = prestamoId,
+                localUri = uri,
+                mimeType = type,
+                fileSizeBytes = size,
+                status = UploadStatus.LOCAL
+            )
+            repository.guardarEvidenciaLocal(evidencia)
+                .onSuccess {
+                    repository.subirEvidencia(evidencia.id)
                 }
         }
     }

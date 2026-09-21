@@ -25,7 +25,8 @@ interface AppContainer {
 class AppDataContainer(private val context: Context) : AppContainer {
 
     override val prestamoRepository: PrestamoRepository by lazy {
-        OfflinePrestamoRepository(AppDatabase.getDatabase(context).prestamoDao())
+        val db = AppDatabase.getDatabase(context)
+        OfflinePrestamoRepository(context, db.prestamoDao(), db.evidenciaDao())
     }
 
     override val preferenciasRepository: PreferenciasRepository by lazy {

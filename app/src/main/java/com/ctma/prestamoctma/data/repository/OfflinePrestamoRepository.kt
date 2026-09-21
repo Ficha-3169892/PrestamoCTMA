@@ -1,10 +1,14 @@
 package com.ctma.prestamoctma.data.repository
 
+import com.ctma.prestamoctma.data.local.dao.EvidenciaDao
 import com.ctma.prestamoctma.data.local.dao.PrestamoDao
 import com.ctma.prestamoctma.data.local.entities.asEntity
 import com.ctma.prestamoctma.data.local.entities.asExternalModel
+import com.ctma.prestamoctma.data.local.entities.EvidenciaEntity
+import com.ctma.prestamoctma.data.local.entities.UploadStatus
 import com.ctma.prestamoctma.data.remote.dto.ArticuloDto
 import com.ctma.prestamoctma.data.remote.dto.PrestamoDto
+import com.ctma.prestamoctma.data.remote.dto.asDto
 import com.ctma.prestamoctma.data.remote.dto.asEntity
 import com.ctma.prestamoctma.data.remote.supabase
 import com.ctma.prestamoctma.model.Equipo
@@ -14,12 +18,17 @@ import com.ctma.prestamoctma.model.GravedadDano
 import com.ctma.prestamoctma.model.SolicitudPrestamo
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import android.net.Uri
+import android.content.Context
 
 class OfflinePrestamoRepository(
+    private val context: Context,
     private val prestamoDao: PrestamoDao,
+    private val evidenciaDao: EvidenciaDao,
 ) : PrestamoRepository {
 
     override fun getEquipos(): Flow<List<Equipo>> =
@@ -37,6 +46,12 @@ class OfflinePrestamoRepository(
             entities.map { it.asExternalModel() }
         }
 
+    override fun getEvidencias(prestamoId: String): Flow<List<EvidenciaEntity>> =
+        evidenciaDao.getEvidenciasByPrestamo(prestamoId)
+
+    override fun getAllEvidencias(): Flow<List<EvidenciaEntity>> =
+        evidenciaDao.getAllEvidencias()
+
     override suspend fun getEquipoById(id: String): Equipo? =
         prestamoDao.getArticuloById(id)?.asExternalModel()
 
@@ -53,11 +68,18 @@ class OfflinePrestamoRepository(
             throw Exception("El equipo no está disponible")
         }
 
-        // 3. Insertar solicitud
-        prestamoDao.insertPrestamo(solicitud.asEntity())
+        // 3. Sincronizar con Supabase PRIMERO (o manejar fallo local)
+        // Para este flujo, intentaremos remoto y si falla, lanzamos error (requiere internet para solicitudes nuevas)
+        val dto = solicitud.asEntity().asDto()
+        supabase.postgrest.from("prestamos").upsert(dto)
+        
+        // Actualizar estado del equipo en remoto también
+        val articuloActualizado = articulo.copy(estado = EstadoEquipo.RESERVADO)
+        supabase.postgrest.from("articulos").upsert(articuloActualizado.asDto())
 
-        // 4. Actualizar estado del equipo
-        prestamoDao.updateArticulo(articulo.copy(estado = EstadoEquipo.RESERVADO))
+        // 4. Si lo remoto fue bien, actualizamos local
+        prestamoDao.insertPrestamo(solicitud.asEntity())
+        prestamoDao.updateArticulo(articuloActualizado)
     }
 
     override suspend fun cancelarSolicitud(id: String): Result<Unit> = runCatching {
@@ -68,13 +90,23 @@ class OfflinePrestamoRepository(
             throw Exception("No se puede cancelar una solicitud en estado ${prestamo.estado}")
         }
 
-        // 1. Actualizar solicitud
-        prestamoDao.updatePrestamo(prestamo.copy(estado = EstadoSolicitud.CANCELADA))
+        val prestamoCancelado = prestamo.copy(estado = EstadoSolicitud.CANCELADA)
+        
+        // 1. Remoto
+        supabase.postgrest.from("prestamos").upsert(prestamoCancelado.asDto())
 
-        // 2. Liberar equipo
-        prestamoDao.getArticuloById(prestamo.equipoId)?.let { articulo ->
-            prestamoDao.updateArticulo(articulo.copy(estado = EstadoEquipo.DISPONIBLE))
+        // 2. Liberar equipo en remoto
+        val articulo = prestamoDao.getArticuloById(prestamo.equipoId)
+        if (articulo != null) {
+            val articuloLibre = articulo.copy(estado = EstadoEquipo.DISPONIBLE)
+            supabase.postgrest.from("articulos").upsert(articuloLibre.asDto())
+            
+            // Local
+            prestamoDao.updateArticulo(articuloLibre)
         }
+
+        // 3. Local
+        prestamoDao.updatePrestamo(prestamoCancelado)
     }
 
     override suspend fun procesarDevolucion(
@@ -85,14 +117,14 @@ class OfflinePrestamoRepository(
         val prestamo = prestamoDao.getPrestamoById(solicitudId)
             ?: throw Exception("Solicitud no encontrada")
 
-        // 1. Actualizar solicitud
-        prestamoDao.updatePrestamo(
-            prestamo.copy(
-                estado = EstadoSolicitud.DEVUELTA,
-                novedadDetalle = novedadDetalle,
-                gravedadDano = gravedad
-            )
+        val prestamoDevuelto = prestamo.copy(
+            estado = EstadoSolicitud.DEVUELTA,
+            novedadDetalle = novedadDetalle,
+            gravedadDano = gravedad
         )
+
+        // 1. Remoto
+        supabase.postgrest.from("prestamos").upsert(prestamoDevuelto.asDto())
 
         // 2. Actualizar estado del equipo (si hay daño grave, dejar en mantenimiento)
         val articulo = prestamoDao.getArticuloById(prestamo.equipoId)
@@ -102,11 +134,22 @@ class OfflinePrestamoRepository(
             } else {
                 EstadoEquipo.DISPONIBLE
             }
-            prestamoDao.updateArticulo(articulo.copy(estado = nuevoEstado))
+            val articuloActualizado = articulo.copy(estado = nuevoEstado)
+            
+            supabase.postgrest.from("articulos").upsert(articuloActualizado.asDto())
+            
+            // Local
+            prestamoDao.updateArticulo(articuloActualizado)
         }
+        
+        // Local prestamo
+        prestamoDao.updatePrestamo(prestamoDevuelto)
     }
 
     override suspend fun agregarEquipo(equipo: Equipo): Result<Unit> = runCatching {
+        val dto = equipo.asEntity().asDto()
+        supabase.postgrest.from("articulos").upsert(dto)
+        
         prestamoDao.insertArticulos(listOf(equipo.asEntity()))
     }
 
@@ -129,6 +172,39 @@ class OfflinePrestamoRepository(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun guardarEvidenciaLocal(evidencia: EvidenciaEntity): Result<Unit> = runCatching {
+        evidenciaDao.insertEvidencia(evidencia)
+    }
+
+    override suspend fun subirEvidencia(id: String): Result<Unit> = try {
+        val evidencia = evidenciaDao.getEvidenciaById(id) 
+            ?: throw Exception("Evidencia no encontrada")
+        
+        evidenciaDao.updateStatus(id, UploadStatus.SUBIENDO)
+
+        val uri = Uri.parse(evidencia.localUri)
+        val inputStream = context.contentResolver.openInputStream(uri)
+            ?: throw Exception("No se pudo abrir el archivo")
+        
+        val bytes = inputStream.use { it.readBytes() }
+        val fileName = "${evidencia.prestamoId}/${evidencia.id}.${evidencia.mimeType.split("/").last()}"
+
+        val bucket = supabase.storage.from("evidencias")
+        bucket.upload(fileName, bytes, upsert = true)
+
+        val remoteUrl = bucket.publicUrl(fileName)
+        evidenciaDao.updateEvidencia(evidencia.copy(
+            status = UploadStatus.SINCRONIZADA,
+            remoteUrl = remoteUrl
+        ))
+
+        Result.success(Unit)
+    } catch (e: Exception) {
+        e.printStackTrace() // Imprime el error exacto en el Logcat para depuración
+        evidenciaDao.updateStatus(id, UploadStatus.FALLIDA)
         Result.failure(e)
     }
 }

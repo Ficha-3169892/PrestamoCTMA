@@ -121,9 +121,13 @@ fun AppNavigation(
         composable(Screen.MisSolicitudes.route) {
             MisSolicitudesScreen(
                 listadoSolicitudes = uiState.listadoSolicitudes,
+                evidencias = uiState.evidenciasPorPrestamo,
                 onCancelar = { viewModel.cancelarSolicitud(it) },
                 onReportarDevolucion = { id, detalle, gravedad ->
                     viewModel.reportarNovedadDevolucion(id, detalle, gravedad)
+                },
+                onGuardarEvidencia = { id, uri, size, type ->
+                    viewModel.guardarEvidencia(id, uri, size, type)
                 },
                 onBack = { navController.popBackStack() }
             )

@@ -1,9 +1,11 @@
 package com.ctma.prestamoctma.data.repository
 
+import com.ctma.prestamoctma.data.local.entities.EvidenciaEntity
 import com.ctma.prestamoctma.model.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.util.Calendar
@@ -56,6 +58,10 @@ class InMemoryPrestamoRepository : PrestamoRepository {
     override fun getSolicitudesByUsuario(usuarioId: String): Flow<List<SolicitudPrestamo>> = 
         _solicitudes.asStateFlow().map { list -> list.filter { it.usuarioId == usuarioId } }
 
+    override fun getEvidencias(prestamoId: String): Flow<List<EvidenciaEntity>> = flowOf(emptyList())
+
+    override fun getAllEvidencias(): Flow<List<EvidenciaEntity>> = flowOf(emptyList())
+
     override suspend fun getEquipoById(id: String): Equipo? = _equipos.value.find { it.id == id }
     
     override suspend fun getSolicitudById(id: String): SolicitudPrestamo? = _solicitudes.value.find { it.id == id }
@@ -102,6 +108,14 @@ class InMemoryPrestamoRepository : PrestamoRepository {
     }
 
     override suspend fun refresh(): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override suspend fun guardarEvidenciaLocal(evidencia: EvidenciaEntity): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override suspend fun subirEvidencia(id: String): Result<Unit> {
         return Result.success(Unit)
     }
 }

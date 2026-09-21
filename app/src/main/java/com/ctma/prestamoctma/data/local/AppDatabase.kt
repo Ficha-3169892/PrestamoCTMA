@@ -5,19 +5,24 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.ctma.prestamoctma.data.local.dao.EvidenciaDao
 import com.ctma.prestamoctma.data.local.dao.PrestamoDao
 import com.ctma.prestamoctma.data.local.entities.ArticuloEntity
+import com.ctma.prestamoctma.data.local.entities.EvidenciaEntity
 import com.ctma.prestamoctma.data.local.entities.PrestamoEntity
 
 @Database(
-    entities = [ArticuloEntity::class, PrestamoEntity::class],
-    version = 1,
+    entities = [ArticuloEntity::class, PrestamoEntity::class, EvidenciaEntity::class],
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     @Suppress("unused")
     abstract fun prestamoDao(): PrestamoDao
+    
+    @Suppress("unused")
+    abstract fun evidenciaDao(): EvidenciaDao
 
     companion object {
         @Volatile
