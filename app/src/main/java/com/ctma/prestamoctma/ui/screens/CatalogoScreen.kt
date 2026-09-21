@@ -21,13 +21,16 @@ import com.ctma.prestamoctma.R
 import com.ctma.prestamoctma.model.Equipo
 import com.ctma.prestamoctma.model.EstadoEquipo
 import com.ctma.prestamoctma.model.SolicitudPrestamo
+import com.ctma.prestamoctma.ui.viewmodel.ListadoUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogoScreen(
-    equipos: List<Equipo>,
+    listadoEquipos: ListadoUiState<Equipo>,
     solicitudes: List<SolicitudPrestamo> = emptyList(),
+    searchQuery: String = "",
     error: String?,
+    onSearchQueryChange: (String) -> Unit = {},
     onEquipoClick: (Equipo) -> Unit,
     onVerSolicitudes: () -> Unit,
     onAgregarEquipo: () -> Unit,
@@ -77,6 +80,17 @@ fun CatalogoScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
+            // Buscador
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                label = { Text("Buscar equipo...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                singleLine = true
+            )
+
             // Criterio 2: Aviso visual persistente si la solicitud se encuentra vencida
             val vencidasCount = solicitudes.count { it.estaVencida() }
             if (vencidasCount > 0) {
@@ -104,25 +118,38 @@ fun CatalogoScreen(
                 }
             }
 
-            if (equipos.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.catalogo_title),
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+            when (listadoEquipos) {
+                is ListadoUiState.Cargando -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
-                    items(equipos) { equipo ->
-                        EquipoCard(equipo = equipo, onClick = { onEquipoClick(equipo) })
+                }
+                is ListadoUiState.Vacio -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "No hay equipos disponibles", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+                is ListadoUiState.Error -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = listadoEquipos.mensaje, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                is ListadoUiState.Contenido -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.catalogo_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        items(listadoEquipos.items) { equipo ->
+                            EquipoCard(equipo = equipo, onClick = { onEquipoClick(equipo) })
+                        }
                     }
                 }
             }

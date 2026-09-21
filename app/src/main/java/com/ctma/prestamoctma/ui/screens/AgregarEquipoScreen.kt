@@ -11,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ctma.prestamoctma.R
 import com.ctma.prestamoctma.model.CategoriaEquipo
+import com.ctma.prestamoctma.ui.viewmodel.OperacionUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,8 +19,11 @@ fun AgregarEquipoScreen(
     onAgregar: (String, CategoriaEquipo, String) -> Unit,
     onBack: () -> Unit,
     error: String?,
+    operacionEstado: OperacionUiState = OperacionUiState.Idle,
     onDismissError: () -> Unit
 ) {
+    val isLoading = operacionEstado == OperacionUiState.Ejecutando
+    
     var nombre by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf(CategoriaEquipo.COMPUTACION) }
     var descripcion by remember { mutableStateOf("") }
@@ -61,7 +65,8 @@ fun AgregarEquipoScreen(
                 value = nombre,
                 onValueChange = { nombre = it },
                 label = { Text(stringResource(R.string.nombre_equipo_label)) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading
             )
 
             Box(modifier = Modifier.fillMaxWidth()) {
@@ -73,29 +78,32 @@ fun AgregarEquipoScreen(
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading
                 )
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    CategoriaEquipo.entries.forEach { cat ->
-                        DropdownMenuItem(
-                            text = { Text(cat.name) },
-                            onClick = {
-                                categoria = cat
-                                expanded = false
-                            }
-                        )
+                if (!isLoading) {
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        CategoriaEquipo.entries.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(cat.name) },
+                                onClick = {
+                                    categoria = cat
+                                    expanded = false
+                                }
+                            )
+                        }
                     }
+                    // HACK: Clickable overlay for dropdown
+                    Surface(
+                        onClick = { expanded = !expanded },
+                        color = Color.Transparent,
+                        modifier = Modifier.matchParentSize()
+                    ) {}
                 }
-                // HACK: Clickable overlay for dropdown
-                Surface(
-                    onClick = { expanded = !expanded },
-                    color = Color.Transparent,
-                    modifier = Modifier.matchParentSize()
-                ) {}
             }
 
             OutlinedTextField(
@@ -103,14 +111,20 @@ fun AgregarEquipoScreen(
                 onValueChange = { descripcion = it },
                 label = { Text(stringResource(R.string.descripcion_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 3
+                minLines = 3,
+                enabled = !isLoading
             )
 
             Button(
                 onClick = { onAgregar(nombre, categoria, descripcion) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading
             ) {
-                Text(stringResource(R.string.guardar_equipo_button))
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text(stringResource(R.string.guardar_equipo_button))
+                }
             }
         }
     }

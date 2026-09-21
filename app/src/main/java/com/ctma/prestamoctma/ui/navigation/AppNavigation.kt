@@ -2,9 +2,9 @@ package com.ctma.prestamoctma.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -15,6 +15,8 @@ import com.ctma.prestamoctma.ui.screens.AgregarEquipoScreen
 import com.ctma.prestamoctma.ui.screens.CatalogoScreen
 import com.ctma.prestamoctma.ui.screens.MisSolicitudesScreen
 import com.ctma.prestamoctma.ui.screens.SolicitarScreen
+import com.ctma.prestamoctma.ui.viewmodel.ListadoUiState
+import com.ctma.prestamoctma.ui.viewmodel.OperacionUiState
 import com.ctma.prestamoctma.ui.viewmodel.PrestamoViewModel
 
 sealed class Screen(val route: String) {
@@ -32,18 +34,21 @@ fun AppNavigation(
     viewModel: PrestamoViewModel = viewModel(factory = PrestamoViewModel.Factory)
 ) {
     val navController = rememberNavController()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(uiState.isSolicitudExitosa, uiState.isEquipoAgregadoExitosamente) {
-        if (uiState.isSolicitudExitosa) {
-            navController.navigate(Screen.MisSolicitudes.route) {
-                popUpTo(Screen.Catalogo.route)
+    LaunchedEffect(uiState.operacionEstado) {
+        if (uiState.operacionEstado == OperacionUiState.Exito) {
+            // Si estábamos agregando o solicitando, navegamos o retrocedemos
+            // Aquí hay que ser cuidadoso con la ruta actual
+            val currentRoute = navController.currentDestination?.route
+            if (currentRoute?.startsWith("solicitar") == true) {
+                navController.navigate(Screen.MisSolicitudes.route) {
+                    popUpTo(Screen.Catalogo.route)
+                }
+            } else if (currentRoute == Screen.AgregarEquipo.route) {
+                navController.popBackStack()
             }
-            viewModel.resetSolicitudExitosa()
-        }
-        if (uiState.isEquipoAgregadoExitosamente) {
-            navController.popBackStack()
-            viewModel.resetEquipoAgregadoExitosamente()
+            viewModel.resetOperacionEstado()
         }
     }
 
@@ -53,10 +58,14 @@ fun AppNavigation(
         modifier = modifier
     ) {
         composable(Screen.Catalogo.route) {
+            val solicitudes = (uiState.listadoSolicitudes as? ListadoUiState.Contenido)?.items ?: emptyList()
+
             CatalogoScreen(
-                equipos = uiState.equipos,
-                solicitudes = uiState.solicitudes,
-                error = uiState.error,
+                listadoEquipos = uiState.listadoEquipos,
+                solicitudes = solicitudes,
+                searchQuery = uiState.searchQuery,
+                error = uiState.errorMensaje,
+                onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
                 onEquipoClick = { equipo ->
                     navController.navigate(Screen.Solicitar.createRoute(equipo.id))
                 },
@@ -79,7 +88,8 @@ fun AppNavigation(
                     viewModel.clearError()
                     navController.popBackStack() 
                 },
-                error = uiState.error,
+                error = uiState.errorMensaje,
+                operacionEstado = uiState.operacionEstado,
                 onDismissError = { viewModel.clearError() }
             )
         }
@@ -89,10 +99,13 @@ fun AppNavigation(
             arguments = listOf(navArgument("equipoId") { type = NavType.StringType })
         ) { backStackEntry ->
             val equipoId = backStackEntry.arguments?.getString("equipoId") ?: ""
+            val equipos = (uiState.listadoEquipos as? ListadoUiState.Contenido)?.items ?: emptyList()
+            
             SolicitarScreen(
                 equipoId = equipoId,
-                equipos = uiState.equipos,
-                error = uiState.error,
+                equipos = equipos,
+                error = uiState.errorMensaje,
+                operacionEstado = uiState.operacionEstado,
                 onSolicitar = { id, amb, prop, dur ->
                     viewModel.solicitarPrestamo(id, amb, prop, dur)
                 },
@@ -106,7 +119,7 @@ fun AppNavigation(
 
         composable(Screen.MisSolicitudes.route) {
             MisSolicitudesScreen(
-                solicitudes = uiState.solicitudes,
+                listadoSolicitudes = uiState.listadoSolicitudes,
                 onCancelar = { viewModel.cancelarSolicitud(it) },
                 onReportarDevolucion = { id, detalle, gravedad ->
                     viewModel.reportarNovedadDevolucion(id, detalle, gravedad)

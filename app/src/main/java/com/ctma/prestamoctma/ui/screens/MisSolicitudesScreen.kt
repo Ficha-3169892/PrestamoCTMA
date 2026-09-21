@@ -18,18 +18,21 @@ import com.ctma.prestamoctma.R
 import com.ctma.prestamoctma.model.EstadoSolicitud
 import com.ctma.prestamoctma.model.GravedadDano
 import com.ctma.prestamoctma.model.SolicitudPrestamo
+import com.ctma.prestamoctma.ui.viewmodel.ListadoUiState
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MisSolicitudesScreen(
-    solicitudes: List<SolicitudPrestamo>,
+    listadoSolicitudes: ListadoUiState<SolicitudPrestamo>,
     onCancelar: (String) -> Unit,
     onReportarDevolucion: (String, String, GravedadDano) -> Unit,
     onBack: () -> Unit
 ) {
     var solicitudParaReportar by remember { mutableStateOf<SolicitudPrestamo?>(null) }
+    
+    val solicitudes = (listadoSolicitudes as? ListadoUiState.Contenido)?.items ?: emptyList()
 
     Scaffold(
         topBar = {
@@ -70,22 +73,35 @@ fun MisSolicitudesScreen(
                 }
             }
 
-            if (solicitudes.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.no_solicitudes_msg))
+            when (listadoSolicitudes) {
+                is ListadoUiState.Cargando -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(solicitudes) { solicitud ->
-                        SolicitudCard(
-                            solicitud = solicitud, 
-                            onCancelar = { onCancelar(solicitud.id) },
-                            onDevolver = { solicitudParaReportar = solicitud }
-                        )
+                is ListadoUiState.Vacio -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.no_solicitudes_msg))
+                    }
+                }
+                is ListadoUiState.Error -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = listadoSolicitudes.mensaje, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                is ListadoUiState.Contenido -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(listadoSolicitudes.items) { solicitud ->
+                            SolicitudCard(
+                                solicitud = solicitud, 
+                                onCancelar = { onCancelar(solicitud.id) },
+                                onDevolver = { solicitudParaReportar = solicitud }
+                            )
+                        }
                     }
                 }
             }

@@ -16,127 +16,139 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 class PrestamoViewModel(
     private val repository: PrestamoRepository,
     private val preferenciasRepository: PreferenciasRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PrestamoUiState())
-    val uiState: StateFlow<PrestamoUiState> = _uiState.asStateFlow()
+    private val _operacionEstado = MutableStateFlow<OperacionUiState>(OperacionUiState.Idle)
+    private val _errorMensaje = MutableStateFlow<String?>(null)
+    private val _searchQuery = MutableStateFlow("")
+
+    // RN-06: Fuente única de verdad reactiva con cancelación de búsquedas obsoletas.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<PrestamoUiState> = combine(
+        repository.getEquipos(),
+        _searchQuery,
+        preferenciasRepository.filtroEstado,
+        _operacionEstado,
+        _errorMensaje
+    ) { equipos, query, filtro, operacion, error ->
+        Triple(equipos, query, filtro) to (operacion to error)
+    }.flatMapLatest { (data, status) ->
+        val (equipos, query, filtro) = data
+        val (operacion, error) = status
+        
+        repository.getSolicitudes().map { solicitudes ->
+            val filtradas = solicitudes.filter { sol ->
+                (filtro == null || sol.estado == filtro) &&
+                (query.isEmpty() || sol.nombreEquipo.contains(query, ignoreCase = true))
+            }
+            
+            PrestamoUiState(
+                listadoEquipos = if (equipos.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(equipos),
+                listadoSolicitudes = if (filtradas.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(filtradas),
+                filtroEstado = filtro,
+                searchQuery = query,
+                operacionEstado = operacion,
+                errorMensaje = error
+            )
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = PrestamoUiState()
+    )
 
     private val _vencimientosAlertados = mutableSetOf<String>()
-    
-    private var isSubmitting = false
 
     init {
-        loadData()
         startAlertPolling()
-    }
-
-    private fun loadData() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            
-            combine(
-                repository.getEquipos(),
-                repository.getSolicitudes(),
-                preferenciasRepository.filtroEstado
-            ) { equipos, solicitudes, filtro ->
-                _uiState.update { 
-                    it.copy(
-                        equipos = equipos,
-                        solicitudes = solicitudes,
-                        filtroEstado = filtro,
-                        isLoading = false
-                    )
-                }
-            }.collect()
-        }
-    }
-
-    @Suppress("unused")
-    fun actualizarFiltro(estado: EstadoSolicitud?) {
-        viewModelScope.launch {
-            preferenciasRepository.guardarFiltroEstado(estado)
-        }
     }
 
     private fun startAlertPolling() {
         viewModelScope.launch {
             while (true) {
-                val solicitudes = _uiState.value.solicitudes
-                val porVencer = solicitudes.filter { 
-                    it.faltaPocoParaVencer() && !_vencimientosAlertados.contains(it.id) 
-                }
+                val listado = uiState.value.listadoSolicitudes
+                if (listado is ListadoUiState.Contenido) {
+                    val porVencer = listado.items.filter {
+                        it.faltaPocoParaVencer() && !_vencimientosAlertados.contains(it.id)
+                    }
 
-                if (porVencer.isNotEmpty()) {
-                    val nombres = porVencer.joinToString(", ") { it.nombreEquipo }
-                    _uiState.update { it.copy(error = "Recordatorio: El préstamo de $nombres vence en menos de 15 minutos.") }
-                    porVencer.forEach { _vencimientosAlertados.add(it.id) }
+                    if (porVencer.isNotEmpty()) {
+                        val nombres = porVencer.joinToString(", ") { it.nombreEquipo }
+                        _errorMensaje.value = "Recordatorio: El préstamo de $nombres vence en menos de 15 minutos."
+                        porVencer.forEach { _vencimientosAlertados.add(it.id) }
+                    }
                 }
-                delay(1.minutes) // Verificar cada minuto
+                delay(1.minutes)
             }
         }
     }
 
+    /**
+     * RN-04, RN-03, RN-01, RN-02: Validaciones de negocio y ejecución main-safe.
+     */
     fun solicitarPrestamo(
         equipoId: String,
         ambiente: String,
         proposito: String,
         duracion: Int
     ) {
-        if (isSubmitting) return
-        isSubmitting = true
+        if (_operacionEstado.value == OperacionUiState.Ejecutando) return
 
         viewModelScope.launch {
+            _operacionEstado.value = OperacionUiState.Ejecutando
+            _errorMensaje.value = null
+
             val equipo = repository.getEquipoById(equipoId)
-            
-            when {
-                equipo == null -> {
-                    _uiState.update { it.copy(error = "Equipo no encontrado") }
-                }
-                !Validaciones.esEquipoDisponible(equipo.estado) -> {
-                    _uiState.update { it.copy(error = "RN-04: El equipo no está disponible") }
-                }
-                !Validaciones.validarAmbienteDestino(ambiente) -> {
-                    _uiState.update { it.copy(error = "RN-03: El ambiente es obligatorio") }
-                }
-                !Validaciones.validarProposito(proposito) -> {
-                    _uiState.update { it.copy(error = "RN-01: El propósito debe tener entre 10 y 180 caracteres") }
-                }
-                !Validaciones.validarDuracion(duracion) -> {
-                    _uiState.update { it.copy(error = "RN-02: La duración debe estar entre 1 y 8 horas") }
-                }
-                else -> {
-                    val nuevaSolicitud = SolicitudPrestamo(
-                        id = UUID.randomUUID().toString(),
-                        equipoId = equipoId,
-                        nombreEquipo = equipo.nombre,
-                        usuarioId = "USER_CTMA_01",
-                        ambienteDestino = ambiente,
-                        proposito = proposito,
-                        duracionHoras = duracion
-                    )
-                    
-                    repository.registrarSolicitud(nuevaSolicitud)
-                        .onSuccess {
-                            _uiState.update { it.copy(isSolicitudExitosa = true, error = null) }
-                        }
-                        .onFailure { e ->
-                            _uiState.update { it.copy(error = e.message) }
-                        }
-                }
+
+            val validationError = when {
+                equipo == null -> "Equipo no encontrado"
+                !Validaciones.esEquipoDisponible(equipo.estado) -> "RN-04: El equipo no está disponible"
+                !Validaciones.validarAmbienteDestino(ambiente) -> "RN-03: El ambiente es obligatorio"
+                !Validaciones.validarProposito(proposito) -> "RN-01: El propósito debe tener entre 10 y 180 caracteres"
+                !Validaciones.validarDuracion(duracion) -> "RN-02: La duración debe estar entre 1 y 8 horas"
+                else -> null
             }
-            isSubmitting = false
+
+            if (validationError != null) {
+                _operacionEstado.value = OperacionUiState.Fallo(validationError)
+                _errorMensaje.value = validationError
+                return@launch
+            }
+
+            val nuevaSolicitud = SolicitudPrestamo(
+                id = UUID.randomUUID().toString(),
+                equipoId = equipoId,
+                nombreEquipo = equipo!!.nombre,
+                usuarioId = "USER_CTMA_01",
+                ambienteDestino = ambiente,
+                proposito = proposito,
+                duracionHoras = duracion
+            )
+
+            repository.registrarSolicitud(nuevaSolicitud)
+                .onSuccess {
+                    _operacionEstado.value = OperacionUiState.Exito
+                }
+                .onFailure { e ->
+                    _operacionEstado.value = OperacionUiState.Fallo(e.message ?: "Error desconocido")
+                    _errorMensaje.value = e.message
+                }
         }
     }
 
     fun cancelarSolicitud(id: String) {
         viewModelScope.launch {
+            _operacionEstado.value = OperacionUiState.Ejecutando
             repository.cancelarSolicitud(id)
+                .onSuccess { _operacionEstado.value = OperacionUiState.Exito }
                 .onFailure { e ->
-                    _uiState.update { it.copy(error = e.message) }
+                    _operacionEstado.value = OperacionUiState.Fallo(e.message ?: "Error")
+                    _errorMensaje.value = e.message
                 }
         }
     }
@@ -147,22 +159,29 @@ class PrestamoViewModel(
         gravedad: GravedadDano
     ) {
         viewModelScope.launch {
+            _operacionEstado.value = OperacionUiState.Ejecutando
             repository.procesarDevolucion(solicitudId, detalle, gravedad)
-                .onSuccess {
-                    _uiState.update { it.copy(error = null) }
+                .onSuccess { 
+                    _operacionEstado.value = OperacionUiState.Exito 
+                    _errorMensaje.value = null
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(error = e.message) }
+                    _operacionEstado.value = OperacionUiState.Fallo(e.message ?: "Error")
+                    _errorMensaje.value = e.message
                 }
         }
     }
 
     fun clearError() {
-        _uiState.update { it.copy(error = null) }
+        _errorMensaje.value = null
     }
 
-    fun resetSolicitudExitosa() {
-        _uiState.update { it.copy(isSolicitudExitosa = false) }
+    fun onSearchQueryChange(newQuery: String) {
+        _searchQuery.value = newQuery
+    }
+
+    fun resetOperacionEstado() {
+        _operacionEstado.value = OperacionUiState.Idle
     }
 
     fun agregarEquipo(
@@ -171,11 +190,12 @@ class PrestamoViewModel(
         descripcion: String
     ) {
         if (nombre.isBlank()) {
-            _uiState.update { it.copy(error = "El nombre es obligatorio") }
+            _errorMensaje.value = "El nombre es obligatorio"
             return
         }
 
         viewModelScope.launch {
+            _operacionEstado.value = OperacionUiState.Ejecutando
             val nuevoEquipo = Equipo(
                 id = UUID.randomUUID().toString(),
                 nombre = nombre,
@@ -184,17 +204,19 @@ class PrestamoViewModel(
                 descripcion = descripcion
             )
             repository.agregarEquipo(nuevoEquipo)
-                .onSuccess {
-                    _uiState.update { it.copy(isEquipoAgregadoExitosamente = true, error = null) }
-                }
+                .onSuccess { _operacionEstado.value = OperacionUiState.Exito }
                 .onFailure { e ->
-                    _uiState.update { it.copy(error = e.message) }
+                    _operacionEstado.value = OperacionUiState.Fallo(e.message ?: "Error")
+                    _errorMensaje.value = e.message
                 }
         }
     }
 
-    fun resetEquipoAgregadoExitosamente() {
-        _uiState.update { it.copy(isEquipoAgregadoExitosamente = false) }
+    @Suppress("unused")
+    fun actualizarFiltro(estado: EstadoSolicitud?) {
+        viewModelScope.launch {
+            preferenciasRepository.guardarFiltroEstado(estado)
+        }
     }
 
     companion object {
@@ -203,7 +225,7 @@ class PrestamoViewModel(
                 val application = (this[APPLICATION_KEY] as PrestamoApplication)
                 PrestamoViewModel(
                     repository = application.container.prestamoRepository,
-                    preferenciasRepository = application.container.preferenciasRepository
+                    preferenciasRepository = application.container.preferenciasRepository,
                 )
             }
         }
