@@ -26,6 +26,7 @@ class PrestamoViewModel(
     private val _operacionEstado = MutableStateFlow<OperacionUiState>(OperacionUiState.Idle)
     private val _errorMensaje = MutableStateFlow<String?>(null)
     private val _searchQuery = MutableStateFlow("")
+    private val _isRefreshing = MutableStateFlow(false)
 
     // RN-06: Fuente única de verdad reactiva con cancelación de búsquedas obsoletas.
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -34,12 +35,20 @@ class PrestamoViewModel(
         _searchQuery,
         preferenciasRepository.filtroEstado,
         _operacionEstado,
-        _errorMensaje
-    ) { equipos, query, filtro, operacion, error ->
-        Triple(equipos, query, filtro) to (operacion to error)
+        _errorMensaje,
+        _isRefreshing
+    ) { flows ->
+        val equipos = flows[0] as List<Equipo>
+        val query = flows[1] as String
+        val filtro = flows[2] as EstadoSolicitud?
+        val operacion = flows[3] as OperacionUiState
+        val error = flows[4] as String?
+        val refreshing = flows[5] as Boolean
+        
+        Triple(equipos, query, filtro) to (Triple(operacion, error, refreshing))
     }.flatMapLatest { (data, status) ->
         val (equipos, query, filtro) = data
-        val (operacion, error) = status
+        val (operacion, error, refreshing) = status
         
         repository.getSolicitudes().map { solicitudes ->
             val filtradas = solicitudes.filter { sol ->
@@ -52,6 +61,7 @@ class PrestamoViewModel(
                 listadoSolicitudes = if (filtradas.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(filtradas),
                 filtroEstado = filtro,
                 searchQuery = query,
+                isRefreshing = refreshing,
                 operacionEstado = operacion,
                 errorMensaje = error
             )
@@ -65,7 +75,17 @@ class PrestamoViewModel(
     private val _vencimientosAlertados = mutableSetOf<String>()
 
     init {
+        refreshData()
         startAlertPolling()
+    }
+
+    fun refreshData() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            repository.refresh()
+                .onFailure { e -> _errorMensaje.value = "Error de sincronización: ${e.message}" }
+            _isRefreshing.value = false
+        }
     }
 
     private fun startAlertPolling() {
@@ -88,9 +108,6 @@ class PrestamoViewModel(
         }
     }
 
-    /**
-     * RN-04, RN-03, RN-01, RN-02: Validaciones de negocio y ejecución main-safe.
-     */
     fun solicitarPrestamo(
         equipoId: String,
         ambiente: String,

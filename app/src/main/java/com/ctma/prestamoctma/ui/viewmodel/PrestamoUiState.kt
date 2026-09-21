@@ -12,6 +12,7 @@ data class PrestamoUiState(
     val listadoEquipos: ListadoUiState<Equipo> = ListadoUiState.Cargando,
     val filtroEstado: EstadoSolicitud? = null,
     val searchQuery: String = "",
+    val isRefreshing: Boolean = false,
     val operacionEstado: OperacionUiState = OperacionUiState.Idle,
     val errorMensaje: String? = null
 )

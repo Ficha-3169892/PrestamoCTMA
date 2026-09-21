@@ -29,6 +29,7 @@ fun CatalogoScreen(
     listadoEquipos: ListadoUiState<Equipo>,
     solicitudes: List<SolicitudPrestamo> = emptyList(),
     searchQuery: String = "",
+    isRefreshing: Boolean = false,
     error: String?,
     onSearchQueryChange: (String) -> Unit = {},
     onEquipoClick: (Equipo) -> Unit,
@@ -80,6 +81,10 @@ fun CatalogoScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
+            if (isRefreshing) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
             // Buscador
             OutlinedTextField(
                 value = searchQuery,

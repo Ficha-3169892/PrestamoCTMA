@@ -100,4 +100,8 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         _equipos.update { it + equipo }
         return Result.success(Unit)
     }
+
+    override suspend fun refresh(): Result<Unit> {
+        return Result.success(Unit)
+    }
 }

@@ -3,11 +3,18 @@ package com.ctma.prestamoctma.data.repository
 import com.ctma.prestamoctma.data.local.dao.PrestamoDao
 import com.ctma.prestamoctma.data.local.entities.asEntity
 import com.ctma.prestamoctma.data.local.entities.asExternalModel
+import com.ctma.prestamoctma.data.remote.dto.ArticuloDto
+import com.ctma.prestamoctma.data.remote.dto.PrestamoDto
+import com.ctma.prestamoctma.data.remote.dto.asEntity
+import com.ctma.prestamoctma.data.remote.supabase
 import com.ctma.prestamoctma.model.Equipo
 import com.ctma.prestamoctma.model.EstadoEquipo
 import com.ctma.prestamoctma.model.EstadoSolicitud
 import com.ctma.prestamoctma.model.GravedadDano
 import com.ctma.prestamoctma.model.SolicitudPrestamo
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -101,5 +108,27 @@ class OfflinePrestamoRepository(
 
     override suspend fun agregarEquipo(equipo: Equipo): Result<Unit> = runCatching {
         prestamoDao.insertArticulos(listOf(equipo.asEntity()))
+    }
+
+    override suspend fun refresh(): Result<Unit> = try {
+        // 1. Fetch from Supabase
+        val articulosRemotos = supabase.postgrest.from("articulos").select().decodeList<ArticuloDto>()
+        val prestamosRemotos = supabase.postgrest.from("prestamos").select {
+            order("fecha_solicitud", Order.DESCENDING)
+        }.decodeList<PrestamoDto>()
+
+        // 2. Update Room (Transaction-like)
+        prestamoDao.insertArticulos(articulosRemotos.map { it.asEntity() })
+        
+        // Para préstamos, insertamos uno a uno o por lote si el DAO lo soporta
+        prestamosRemotos.forEach { dto ->
+            prestamoDao.insertPrestamo(dto.asEntity())
+        }
+        
+        Result.success(Unit)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 }

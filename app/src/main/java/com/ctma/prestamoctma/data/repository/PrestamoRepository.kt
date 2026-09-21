@@ -19,4 +19,5 @@ interface PrestamoRepository {
         gravedad: GravedadDano
     ): Result<Unit>
     suspend fun agregarEquipo(equipo: Equipo): Result<Unit>
+    suspend fun refresh(): Result<Unit>
 }

@@ -64,6 +64,7 @@ fun AppNavigation(
                 listadoEquipos = uiState.listadoEquipos,
                 solicitudes = solicitudes,
                 searchQuery = uiState.searchQuery,
+                isRefreshing = uiState.isRefreshing,
                 error = uiState.errorMensaje,
                 onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
                 onEquipoClick = { equipo ->
