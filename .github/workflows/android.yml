@@ -2,9 +2,9 @@ name: Android CI - PréstamoLab CTMA
 
 on:
   push:
-    branches: [ "main", "master", "desarrollo", "feat/thomas" ]
+    branches: [ "main", "master", "dev", "feat/thomas" ]
   pull_request:
-    branches: [ "main", "master", "feat/thomas" ]
+    branches: [ "main", "master", "dev", "feat/thomas" ]
 
 jobs:
   build:

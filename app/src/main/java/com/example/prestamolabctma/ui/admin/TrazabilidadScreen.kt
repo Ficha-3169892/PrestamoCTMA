@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.prestamolabctma.model.SolicitudPrestamo
@@ -54,7 +55,7 @@ fun TrazabilidadScreen(
 
 @Composable
 fun TrazabilidadItem(sol: SolicitudPrestamo) {
-    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val sdf = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     val fechaStr = sdf.format(Date(sol.fechaSolicitud))
 
     Card(modifier = Modifier.fillMaxWidth()) {

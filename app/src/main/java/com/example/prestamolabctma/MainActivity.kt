@@ -125,7 +125,7 @@ fun MainApp(viewModel: PrestamoViewModel) {
         ) {
             composable(Screen.Login.route) {
                 LoginScreen(
-                    onLogin = { email -> viewModel.login(email) },
+                    onLogin = { email, rol -> viewModel.login(email, rol) },
                     error = uiState.errorFormulario,
                     isLoading = uiState.guardando,
                 )

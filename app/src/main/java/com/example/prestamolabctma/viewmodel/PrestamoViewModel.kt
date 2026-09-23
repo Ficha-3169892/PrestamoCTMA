@@ -152,7 +152,7 @@ class PrestamoViewModel(
     }
 
     // HU-05: Inicio de Sesión Institucional
-    fun login(correo: String) {
+    fun login(correo: String, rolSeleccionado: RolUsuario? = null) {
         val regexSena = Regex("^[A-Za-z0-9._%+-]+@(soy\\.)?sena\\.edu\\.co$")
         
         if (!regexSena.matches(correo)) {
@@ -164,7 +164,9 @@ class PrestamoViewModel(
         
         viewModelScope.launch {
             repository.login(correo).onSuccess { usuario ->
-                _uiState.update { it.copy(usuarioLogueado = usuario, guardando = false) }
+                val rolFinal = rolSeleccionado ?: if (correo.contains("@sena.edu.co") && !correo.contains("@soy.")) RolUsuario.ADMINISTRADOR else RolUsuario.APRENDIZ
+                val usuarioConRol = usuario.copy(rol = rolFinal)
+                _uiState.update { it.copy(usuarioLogueado = usuarioConRol, guardando = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(errorFormulario = error.message, guardando = false) }
             }
