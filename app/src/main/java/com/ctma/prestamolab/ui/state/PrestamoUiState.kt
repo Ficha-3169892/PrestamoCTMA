@@ -16,6 +16,7 @@ data class PrestamoUiState(
     val busqueda: String = "",
     val categoriaSeleccionada: CategoriaEquipo? = null,
     val estadisticas: Map<String, Int> = emptyMap(),
+    val alertaActiva: Boolean = false, // [HU-15] Estado de alerta para entregas próximas
 ) {
     // Para compatibilidad temporal con lógica existente durante la migración
     val equipos: List<Equipo>

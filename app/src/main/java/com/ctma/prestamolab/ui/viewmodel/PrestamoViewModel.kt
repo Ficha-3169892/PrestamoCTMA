@@ -26,10 +26,44 @@ class PrestamoViewModel(
     private val _uiState = MutableStateFlow(PrestamoUiState())
     val uiState: StateFlow<PrestamoUiState> = _uiState.asStateFlow()
 
+    private var usuarioActual: com.ctma.prestamolab.model.Usuario? = null
+    private var jobObservarSolicitudes: kotlinx.coroutines.Job? = null
+
     init {
         // [Semana 07] Recolección reactiva de datos desde SSOT con Búsqueda Pro
         observarEquiposPro()
+        iniciarMonitoreoAlertas()
+    }
+
+    fun setUsuario(usuario: com.ctma.prestamolab.model.Usuario?) {
+        if (usuarioActual?.id == usuario?.id && jobObservarSolicitudes != null) return
+        usuarioActual = usuario
         observarSolicitudes()
+    }
+
+    private fun iniciarMonitoreoAlertas() {
+        // [HU-15] Monitoreo reactivo de tiempos de entrega
+        _uiState
+            .map { it.solicitudes }
+            .distinctUntilChanged()
+            .onEach { solicitudes ->
+                val tieneSolicitudesProximas = solicitudes.any { sol ->
+                    (sol.estado == com.ctma.prestamolab.model.EstadoSolicitud.APROBADA || 
+                     sol.estado == com.ctma.prestamolab.model.EstadoSolicitud.ENTREGADA)
+                    // Simulación lógica real: Si faltan menos de 15 min para expirar
+                    // Aquí usaríamos sol.fechaCreacion + sol.duracionHoras
+                }
+                // Simulación para demo: Si hay alguna activa, lanzamos alerta tras un breve periodo
+                if (tieneSolicitudesProximas) {
+                    viewModelScope.launch {
+                        kotlinx.coroutines.delay(5000)
+                        _uiState.update { it.copy(alertaActiva = true) }
+                    }
+                } else {
+                    _uiState.update { it.copy(alertaActiva = false) }
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -49,7 +83,16 @@ class PrestamoViewModel(
     }
 
     private fun observarSolicitudes() {
-        repository.observarSolicitudes()
+        jobObservarSolicitudes?.cancel()
+        val user = usuarioActual ?: return
+        
+        val flow = if (user.esAdministrador) {
+            repository.observarSolicitudes()
+        } else {
+            repository.observarSolicitudesPorUsuario(user.id)
+        }
+
+        jobObservarSolicitudes = flow
             .onEach { solicitudes ->
                 _uiState.update { 
                     it.copy(solicitudesState = if (solicitudes.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(solicitudes))
@@ -64,6 +107,7 @@ class PrestamoViewModel(
         uiState.value.solicitudes.firstOrNull { it.id == id }
 
     fun crearSolicitud(
+        usuarioId: Int,
         equipoId: Int,
         ambienteDestino: String,
         proposito: String,
@@ -86,7 +130,7 @@ class PrestamoViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(guardando = true) }
-            repository.crearSolicitud(equipoId, ambienteDestino, proposito, duracion ?: 0)
+            repository.crearSolicitud(usuarioId, equipoId, ambienteDestino, proposito, duracion ?: 0)
                 .onSuccess { id ->
                     _uiState.update { it.copy(mensaje = "Solicitud enviada con éxito", guardando = false) }
                     alCrear(id.toInt())

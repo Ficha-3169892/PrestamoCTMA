@@ -15,6 +15,11 @@ import com.ctma.prestamolab.model.EstadoSolicitud
 import com.ctma.prestamolab.model.SolicitudPrestamo
 import com.ctma.prestamolab.ui.state.ListadoUiState
 
+/**
+ * [HU 10] Aprobación de Solicitudes.
+ * [HU 11] Rechazo con Justificación.
+ * [HU 12] Recepción de Equipos.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GestionSolicitudesAdminScreen(

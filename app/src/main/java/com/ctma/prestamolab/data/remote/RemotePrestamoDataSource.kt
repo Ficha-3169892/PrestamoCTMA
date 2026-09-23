@@ -19,6 +19,9 @@ class RemotePrestamoDataSource {
      * Obtiene la lista de todos los equipos disponibles en la base de datos.
      */
     suspend fun fetchEquipos(): Result<List<EquipoDto>> = withContext(Dispatchers.IO) {
+        if (client.supabaseUrl.contains("YOUR_PROJECT_URL")) {
+            return@withContext Result.success(emptyList())
+        }
         try {
             val equipos = client.postgrest.from("equipos")
                 .select()
@@ -33,6 +36,9 @@ class RemotePrestamoDataSource {
      * Obtiene la lista de solicitudes de préstamo, ordenadas por fecha de creación descendente.
      */
     suspend fun fetchSolicitudes(): Result<List<SolicitudDto>> = withContext(Dispatchers.IO) {
+        if (client.supabaseUrl.contains("YOUR_PROJECT_URL")) {
+            return@withContext Result.success(emptyList())
+        }
         try {
             val solicitudes = client.postgrest.from("solicitudes")
                 .select {
@@ -47,10 +53,13 @@ class RemotePrestamoDataSource {
 
     /**
      * Inserta o actualiza un equipo en la base de datos.
+     * [HU-08/09] Usa 'serie' como llave de resolución de conflictos para evitar desincronización de IDs.
      */
     suspend fun upsertEquipo(dto: EquipoDto): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            client.postgrest.from("equipos").upsert(dto)
+            client.postgrest.from("equipos").upsert(dto) {
+                onConflict = "serie"
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

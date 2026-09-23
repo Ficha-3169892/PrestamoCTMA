@@ -26,3 +26,27 @@ fun validarSolicitud(
         duracion = if ((duracionHoras != null) && duracionValida(duracionHoras)) null else "La duración debe estar entre 1 y 8 horas.",
     )
 }
+
+/**
+ * [HU 05] Validaciones para el inicio de sesión.
+ */
+fun correoSenaValido(correo: String): Boolean {
+    val regex = Regex("^[A-Za-z0-9._%+-]+@(misena\\.edu\\.co|soy\\.sena\\.edu\\.co)$")
+    return regex.matches(correo)
+}
+
+fun contrasenaValida(pass: String): Boolean = pass.length >= 6
+
+data class ErroresLogin(
+    val correo: String? = null,
+    val contrasena: String? = null,
+) {
+    val hayErrores: Boolean get() = correo != null || contrasena != null
+}
+
+fun validarLogin(correo: String, pass: String): ErroresLogin {
+    return ErroresLogin(
+        correo = if (correoSenaValido(correo)) null else "Usa un correo @misena.edu.co o @soy.sena.edu.co",
+        contrasena = if (contrasenaValida(pass)) null else "La contraseña debe tener al menos 6 caracteres"
+    )
+}

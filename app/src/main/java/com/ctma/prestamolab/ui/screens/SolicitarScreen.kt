@@ -24,6 +24,9 @@ import com.ctma.prestamolab.domain.ErroresSolicitud
 import com.ctma.prestamolab.model.Equipo
 import com.ctma.prestamolab.model.EstadoEquipo
 
+/**
+ * [HU 02] Registro de Solicitud de Préstamo.
+ */
 @Composable
 fun SolicitarScreen(
     equipo: Equipo?,

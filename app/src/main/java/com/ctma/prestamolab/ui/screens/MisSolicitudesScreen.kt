@@ -1,19 +1,25 @@
 package com.ctma.prestamolab.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
 import com.ctma.prestamolab.model.Equipo
 import com.ctma.prestamolab.model.SolicitudPrestamo
 import com.ctma.prestamolab.ui.state.ListadoUiState
 
 /**
  * [HU 03] Gestión y Cancelación de Solicitudes.
+ * [HU 04] Ficha Técnica Multimedia: Visualización de fotos.
  */
 @Composable
 fun MisSolicitudesScreen(
@@ -22,6 +28,8 @@ fun MisSolicitudesScreen(
     onBack: () -> Unit,
     onSolicitudClick: (Int) -> Unit,
 ) {
+    var imagenUrlAmpliada by remember { mutableStateOf<String?>(null) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         AppHeader(title = "Mis Préstamos", onBack = onBack)
 
@@ -50,12 +58,21 @@ fun MisSolicitudesScreen(
                         SolicitudCard(
                             solicitud = solicitud,
                             equipoNombre = equipo?.nombre ?: "Equipo desconocido",
-                            onClick = { onSolicitudClick(solicitud.id) }
+                            equipoImagenUrl = equipo?.imagenUrl,
+                            onClick = { onSolicitudClick(solicitud.id) },
+                            onImageClick = { url -> imagenUrlAmpliada = url }
                         )
                     }
                 }
             }
         }
+    }
+
+    if (imagenUrlAmpliada != null) {
+        ImagenAmpliadaDialog(
+            imageUrl = imagenUrlAmpliada!!,
+            onDismiss = { imagenUrlAmpliada = null }
+        )
     }
 }
 
@@ -63,17 +80,72 @@ fun MisSolicitudesScreen(
 private fun SolicitudCard(
     solicitud: SolicitudPrestamo,
     equipoNombre: String,
-    onClick: () -> Unit
+    equipoImagenUrl: String?,
+    onClick: () -> Unit,
+    onImageClick: (String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text("Préstamo #${solicitud.id}", style = MaterialTheme.typography.titleMedium)
-            Text("Equipo: $equipoNombre")
-            Text("Estado: ${solicitud.estado}", color = MaterialTheme.colorScheme.primary)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // [HU-04] Foto del equipo en la solicitud
+            if (equipoImagenUrl != null) {
+                AsyncImage(
+                    model = equipoImagenUrl,
+                    contentDescription = "Imagen de $equipoNombre",
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable { onImageClick(equipoImagenUrl) },
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Préstamo #${solicitud.id}", style = MaterialTheme.typography.titleMedium)
+                Text("Equipo: $equipoNombre")
+                Text("Estado: ${solicitud.estado}", color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImagenAmpliadaDialog(
+    imageUrl: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier.padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Imagen ampliada",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .clip(MaterialTheme.shapes.medium),
+                    contentScale = ContentScale.Fit
+                )
+                TextButton(onClick = onDismiss, modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Cerrar")
+                }
+            }
         }
     }
 }

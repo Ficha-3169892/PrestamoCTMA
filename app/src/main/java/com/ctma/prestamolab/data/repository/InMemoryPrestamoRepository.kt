@@ -28,17 +28,19 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         else lista.filter { it.nombre.contains(query, ignoreCase = true) || it.serie.contains(query, ignoreCase = true) }
     }
     override fun observarSolicitudes(): Flow<List<SolicitudPrestamo>> = _solicitudes.asStateFlow()
+    override fun observarSolicitudesPorUsuario(usuarioId: Int): Flow<List<SolicitudPrestamo>> = 
+        _solicitudes.asStateFlow().map { lista -> lista.filter { it.usuarioId == usuarioId } }
     override fun observarTrazabilidad(equipoId: Int): Flow<List<SolicitudPrestamo>> = MutableStateFlow(emptyList())
 
     override suspend fun obtenerEquipo(id: Int): Equipo? = _equipos.value.find { it.id == id }
     override suspend fun obtenerSolicitud(id: Int): SolicitudPrestamo? = _solicitudes.value.find { it.id == id }
 
-    override suspend fun crearSolicitud(equipoId: Int, ambienteDestino: String, proposito: String, duracionHoras: Int): Result<Long> {
+    override suspend fun crearSolicitud(usuarioId: Int, equipoId: Int, ambienteDestino: String, proposito: String, duracionHoras: Int): Result<Long> {
         val equipo = _equipos.value.find { it.id == equipoId } ?: return Result.failure(Exception("Equipo no encontrado"))
         if (equipo.estado != EstadoEquipo.DISPONIBLE) return Result.failure(Exception("Equipo no disponible"))
 
         val id = System.currentTimeMillis()
-        val solicitud = SolicitudPrestamo(id.toInt(), equipoId, ambienteDestino, proposito, duracionHoras, EstadoSolicitud.SOLICITADA)
+        val solicitud = SolicitudPrestamo(id.toInt(), equipoId, usuarioId, ambienteDestino, proposito, duracionHoras, EstadoSolicitud.SOLICITADA)
         _solicitudes.update { it + solicitud }
         
         // Simular reserva

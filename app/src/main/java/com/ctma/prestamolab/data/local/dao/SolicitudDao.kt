@@ -11,8 +11,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface SolicitudDao {
     // [HU 03] Gestión y Cancelación de Solicitudes
-    @Query("SELECT * FROM solicitudes")
+    @Query("SELECT * FROM solicitudes ORDER BY fechaCreacion DESC")
     fun obtenerTodas(): Flow<List<SolicitudEntity>>
+
+    @Query("SELECT * FROM solicitudes WHERE usuarioId = :usuarioId ORDER BY fechaCreacion DESC")
+    fun obtenerPorUsuario(usuarioId: Int): Flow<List<SolicitudEntity>>
 
     @Query("SELECT * FROM solicitudes WHERE id = :id")
     suspend fun obtenerPorId(id: Int): SolicitudEntity?

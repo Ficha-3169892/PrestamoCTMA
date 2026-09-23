@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ctma.prestamolab.data.ServiceLocator
 import com.ctma.prestamolab.data.repository.AuthRepository
+import com.ctma.prestamolab.domain.ErroresLogin
+import com.ctma.prestamolab.domain.validarLogin
 import com.ctma.prestamolab.model.Usuario
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +17,7 @@ data class AuthUiState(
     val usuario: Usuario? = null,
     val mensaje: String? = null,
     val cargando: Boolean = false,
+    val erroresLogin: ErroresLogin = ErroresLogin(),
 )
 
 class AuthViewModel(
@@ -32,29 +35,41 @@ class AuthViewModel(
     }
 
     fun iniciarSesion(correo: String, contrasena: String) {
-        _uiState.update { it.copy(cargando = true) }
-        authRepository.iniciarSesion(correo, contrasena)
-            .onFailure { error ->
-                _uiState.update { it.copy(mensaje = error.message, cargando = false) }
-            }
-            .onSuccess {
-                _uiState.update { it.copy(mensaje = null, cargando = false) }
-            }
+        val errores = validarLogin(correo, contrasena)
+        if (errores.hayErrores) {
+            _uiState.update { it.copy(erroresLogin = errores) }
+            return
+        }
+
+        _uiState.update { it.copy(cargando = true, erroresLogin = ErroresLogin()) }
+        viewModelScope.launch {
+            authRepository.iniciarSesion(correo, contrasena)
+                .onFailure { error ->
+                    _uiState.update { it.copy(mensaje = error.message, cargando = false) }
+                }
+                .onSuccess {
+                    _uiState.update { it.copy(mensaje = null, cargando = false) }
+                }
+        }
     }
 
     fun cerrarSesion() {
-        authRepository.cerrarSesion()
+        viewModelScope.launch {
+            authRepository.cerrarSesion()
+        }
     }
 
     fun actualizarContacto(telefono: String, correoAlternativo: String?) {
         _uiState.update { it.copy(cargando = true) }
-        authRepository.actualizarContacto(telefono, correoAlternativo)
-            .onSuccess {
-                _uiState.update { it.copy(mensaje = "Datos actualizados", cargando = false) }
-            }
-            .onFailure { error ->
-                _uiState.update { it.copy(mensaje = error.message, cargando = false) }
-            }
+        viewModelScope.launch {
+            authRepository.actualizarContacto(telefono, correoAlternativo)
+                .onSuccess {
+                    _uiState.update { it.copy(mensaje = "Datos actualizados", cargando = false) }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(mensaje = error.message, cargando = false) }
+                }
+        }
     }
 
     fun limpiarMensaje() {

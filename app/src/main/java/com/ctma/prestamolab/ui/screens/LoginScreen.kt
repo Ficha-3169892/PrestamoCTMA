@@ -9,10 +9,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.ctma.prestamolab.ui.viewmodel.AuthUiState
 
+/**
+ * [HU 05] Autenticación y Gestión de Roles.
+ */
 @Composable
 fun LoginScreen(
-    cargando: Boolean,
+    state: AuthUiState,
     onLogin: (String, String) -> Unit,
 ) {
     var correo by remember { mutableStateOf("") }
@@ -34,6 +38,8 @@ fun LoginScreen(
             onValueChange = { correo = it },
             label = { Text("Correo Institucional") },
             placeholder = { Text("ejemplo@soy.sena.edu.co") },
+            supportingText = { state.erroresLogin.correo?.let { Text(it) } },
+            isError = state.erroresLogin.correo != null,
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
@@ -44,6 +50,8 @@ fun LoginScreen(
             value = contrasena,
             onValueChange = { contrasena = it },
             label = { Text("Contraseña") },
+            supportingText = { state.erroresLogin.contrasena?.let { Text(it) } },
+            isError = state.erroresLogin.contrasena != null,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
@@ -53,10 +61,10 @@ fun LoginScreen(
         
         Button(
             onClick = { onLogin(correo, contrasena) },
-            enabled = !cargando && correo.isNotEmpty() && contrasena.isNotEmpty(),
+            enabled = !state.cargando,
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (cargando) {
+            if (state.cargando) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
                     color = MaterialTheme.colorScheme.onPrimary,

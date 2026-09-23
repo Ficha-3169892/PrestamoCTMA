@@ -16,6 +16,10 @@ import com.ctma.prestamolab.ui.state.ListadoUiState
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * [HU 16] Trazabilidad Histórica por Equipo.
+ * [HU 13] Reporte de Novedades (S6-S9).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrazabilidadScreen(

@@ -34,6 +34,10 @@ fun PrestamoLabApp(
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(authState.usuario) {
+        viewModel.setUsuario(authState.usuario)
+    }
+
     LaunchedEffect(uiState.mensaje, authState.mensaje) {
         val mensaje = uiState.mensaje ?: authState.mensaje
         if (mensaje != null) {
@@ -48,7 +52,7 @@ fun PrestamoLabApp(
     ) { padding ->
         if (authState.usuario == null) {
             LoginScreen(
-                cargando = authState.cargando,
+                state = authState,
                 onLogin = { correo, pass -> authViewModel.iniciarSesion(correo, pass) },
             )
         } else {
@@ -133,7 +137,8 @@ fun PrestamoLabApp(
                         guardando = uiState.guardando,
                         onBack = { navController.popBackStack() },
                         onGuardar = { ambiente, proposito, duracion ->
-                            viewModel.crearSolicitud(equipoId, ambiente, proposito, duracion) { solicitudId ->
+                            val usuarioId = authState.usuario?.id ?: 0
+                            viewModel.crearSolicitud(usuarioId, equipoId, ambiente, proposito, duracion) { solicitudId ->
                                 navController.navigate(Rutas.solicitudDetalle(solicitudId)) {
                                     popUpTo(Rutas.CATALOGO)
                                 }
@@ -172,6 +177,7 @@ fun PrestamoLabApp(
                     SolicitudDetalleScreen(
                         solicitud = viewModel.obtenerSolicitud(solicitudId),
                         equipo = viewModel.obtenerSolicitud(solicitudId)?.let { viewModel.obtenerEquipo(it.equipoId) },
+                        alertaActiva = uiState.alertaActiva,
                         onBack = { navController.popBackStack() },
                         onCancelar = { viewModel.cancelarSolicitud(solicitudId) }
                     )

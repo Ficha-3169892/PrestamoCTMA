@@ -11,6 +11,7 @@ import com.ctma.prestamolab.model.EstadoSolicitud
 data class SolicitudEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val equipoId: Int,
+    val usuarioId: Int, // [HU-03] Propietario de la solicitud
     val ambienteDestino: String,
     val proposito: String,
     val duracionHoras: Int,

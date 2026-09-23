@@ -10,6 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+/**
+ * [HU 14] Generación de Estadísticas de Uso.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EstadisticasScreen(

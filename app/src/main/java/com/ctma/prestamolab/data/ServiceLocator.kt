@@ -3,8 +3,9 @@ package com.ctma.prestamolab.data
 import com.ctma.prestamolab.PrestamoLabApplication
 import com.ctma.prestamolab.data.local.database.AppDatabase
 import com.ctma.prestamolab.data.remote.RemotePrestamoDataSource
+import com.ctma.prestamolab.data.remote.supabase
 import com.ctma.prestamolab.data.repository.AuthRepository
-import com.ctma.prestamolab.data.repository.InMemoryAuthRepository
+import com.ctma.prestamolab.data.repository.SupabaseAuthRepository
 import com.ctma.prestamolab.data.repository.LocalPrestamoRepository
 import com.ctma.prestamolab.data.repository.PrestamoRepository
 
@@ -28,6 +29,7 @@ object ServiceLocator {
     }
     
     val authRepository: AuthRepository by lazy {
-        InMemoryAuthRepository() // La autenticación se migrará en la Semana 08 (Supabase)
+        val db = database ?: throw IllegalStateException("ServiceLocator no inicializado")
+        SupabaseAuthRepository(supabase, db.usuarioDao())
     }
 }

@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.dp
 import com.ctma.prestamolab.model.Equipo
 import com.ctma.prestamolab.model.EstadoEquipo
 
+/**
+ * [HU 04] Consultar Detalle y Ficha Técnica de un Equipo.
+ */
 @Composable
 fun EquipoDetalleScreen(
     equipo: Equipo?,

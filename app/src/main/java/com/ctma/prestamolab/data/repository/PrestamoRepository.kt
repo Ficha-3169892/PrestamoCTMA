@@ -8,12 +8,14 @@ interface PrestamoRepository {
     // [HU General] Observables para el estado reactivo (Semana 07)
     fun observarEquipos(query: String = ""): Flow<List<Equipo>>
     fun observarSolicitudes(): Flow<List<SolicitudPrestamo>>
+    fun observarSolicitudesPorUsuario(usuarioId: Int): Flow<List<SolicitudPrestamo>>
     fun observarTrazabilidad(equipoId: Int): Flow<List<SolicitudPrestamo>>
     
     suspend fun obtenerEquipo(id: Int): Equipo?
     suspend fun obtenerSolicitud(id: Int): SolicitudPrestamo?
     
     suspend fun crearSolicitud(
+        usuarioId: Int,
         equipoId: Int,
         ambienteDestino: String,
         proposito: String,

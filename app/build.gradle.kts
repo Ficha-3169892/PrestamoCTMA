@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.ctma.prestamolab"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.ctma.prestamolab"
@@ -18,6 +18,26 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("String", "DB_NAME", "\"prestamolab-db-dev\"")
+        }
+        create("stage") {
+            dimension = "environment"
+            applicationIdSuffix = ".stage"
+            versionNameSuffix = "-stage"
+            buildConfigField("String", "DB_NAME", "\"prestamolab-db-stage\"")
+        }
+        create("prod") {
+            dimension = "environment"
+            buildConfigField("String", "DB_NAME", "\"prestamolab-db\"")
+        }
     }
 
     buildTypes {
@@ -35,12 +55,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+}
+
+// Configuración global del target de Kotlin compatible con la DSL de compilerOptions
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
@@ -55,7 +79,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    
+    implementation(libs.coil.compose)
+
     // [Semana 06] Soporte para Persistencia Local (Room)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -72,7 +97,6 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.junit)
-
     // Pruebas unitarias para corrutinas y ViewModels
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    testImplementation(libs.kotlinx.coroutines.test)
 }

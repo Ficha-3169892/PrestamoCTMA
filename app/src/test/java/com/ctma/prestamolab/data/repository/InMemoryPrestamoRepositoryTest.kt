@@ -14,6 +14,7 @@ class InMemoryPrestamoRepositoryTest {
         val repository = InMemoryPrestamoRepository()
 
         val resultado = repository.crearSolicitud(
+            usuarioId = 1,
             equipoId = 1,
             ambienteDestino = "Ambiente TIC",
             proposito = "Practica de laboratorio",
@@ -24,6 +25,7 @@ class InMemoryPrestamoRepositoryTest {
         val solicitudId = resultado.getOrThrow()
         val solicitud = repository.obtenerSolicitud(solicitudId.toInt())
         assertEquals(EstadoSolicitud.SOLICITADA, solicitud?.estado)
+        assertEquals(1, solicitud?.usuarioId)
         assertEquals(EstadoEquipo.RESERVADO, repository.obtenerEquipo(1)?.estado)
     }
 
@@ -34,6 +36,7 @@ class InMemoryPrestamoRepositoryTest {
         // Equipo 99 no existe
         
         val resultado = repository.crearSolicitud(
+            usuarioId = 1,
             equipoId = 99,
             ambienteDestino = "Ambiente TIC",
             proposito = "Practica de laboratorio",
@@ -48,6 +51,7 @@ class InMemoryPrestamoRepositoryTest {
         // [HU 03] Gestión y Cancelación de Solicitudes
         val repository = InMemoryPrestamoRepository()
         val solicitudId = repository.crearSolicitud(
+            usuarioId = 1,
             equipoId = 1,
             ambienteDestino = "Ambiente TIC",
             proposito = "Practica de laboratorio con duracion",

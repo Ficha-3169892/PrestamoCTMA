@@ -7,16 +7,16 @@ import kotlinx.coroutines.flow.asStateFlow
 interface AuthRepository {
     val usuarioLogueado: StateFlow<Usuario?>
     
-    fun iniciarSesion(correo: String, contrasena: String): Result<Usuario>
-    fun cerrarSesion()
-    fun actualizarContacto(telefono: String, correoAlternativo: String?): Result<Unit>
+    suspend fun iniciarSesion(correo: String, contrasena: String): Result<Usuario>
+    suspend fun cerrarSesion()
+    suspend fun actualizarContacto(telefono: String, correoAlternativo: String?): Result<Unit>
 }
 
 class InMemoryAuthRepository : AuthRepository {
     private val _usuarioLogueado = kotlinx.coroutines.flow.MutableStateFlow<Usuario?>(null)
     override val usuarioLogueado = _usuarioLogueado.asStateFlow()
 
-    override fun iniciarSesion(correo: String, contrasena: String): Result<Usuario> {
+    override suspend fun iniciarSesion(correo: String, contrasena: String): Result<Usuario> {
         val esValido = correo.endsWith("@soy.sena.edu.co") || correo.endsWith("@sena.edu.co")
         if (!esValido) {
             return Result.failure(IllegalArgumentException("El correo debe ser institucional (@sena.edu.co o @soy.sena.edu.co)"))
@@ -36,11 +36,11 @@ class InMemoryAuthRepository : AuthRepository {
         return Result.success(usuario)
     }
 
-    override fun cerrarSesion() {
+    override suspend fun cerrarSesion() {
         _usuarioLogueado.value = null
     }
 
-    override fun actualizarContacto(telefono: String, correoAlternativo: String?): Result<Unit> {
+    override suspend fun actualizarContacto(telefono: String, correoAlternativo: String?): Result<Unit> {
         val actual = _usuarioLogueado.value ?: return Result.failure(IllegalStateException("No hay sesión activa"))
         _usuarioLogueado.value = actual.copy(telefono = telefono, correoAlternativo = correoAlternativo)
         return Result.success(Unit)

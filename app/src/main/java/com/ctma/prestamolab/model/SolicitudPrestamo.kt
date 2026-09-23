@@ -1,8 +1,12 @@
 package com.ctma.prestamolab.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class SolicitudPrestamo(
     val id: Int,
     val equipoId: Int,
+    val usuarioId: Int = 0, // [HU-03] Identificador del aprendiz
     val ambienteDestino: String,
     val proposito: String,
     val duracionHoras: Int,

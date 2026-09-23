@@ -43,8 +43,9 @@ class PrestamoViewModelTest {
         // Assert inicial
         assertTrue(viewModel.uiState.value.equiposState is ListadoUiState.Cargando)
 
-        // Avanzar corrutinas
-        advanceUntilIdle()
+        // Avanzar tiempo para superar el debounce(300) de observarEquiposPro
+        advanceTimeBy(500)
+        runCurrent()
 
         // Assert final
         assertTrue(viewModel.uiState.value.equiposState is ListadoUiState.Contenido)
@@ -61,6 +62,11 @@ class PrestamoViewModelTest {
         
         // Assert
         assertEquals("multimetro", viewModel.uiState.value.busqueda)
+        
+        // Verificar que tras el debounce se actualice la lista
+        advanceTimeBy(500)
+        runCurrent()
+        assertTrue(viewModel.uiState.value.equiposState is ListadoUiState.Vacio) // No hay "multimetro" en el repo inicial
     }
 
     @Test
@@ -83,6 +89,7 @@ class PrestamoViewModelTest {
         // [HU 02] Registrar Solicitud de Préstamo
         // Act
         viewModel.crearSolicitud(
+            usuarioId = 1,
             equipoId = 1,
             ambienteDestino = "Aula 101",
             proposito = "Práctica de laboratorio",

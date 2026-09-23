@@ -14,6 +14,7 @@ import com.ctma.prestamolab.model.SolicitudPrestamo
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /**
@@ -35,6 +36,12 @@ class LocalPrestamoRepository(
 
     override fun observarSolicitudes(): Flow<List<SolicitudPrestamo>> {
         return solicitudDao.obtenerTodas().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override fun observarSolicitudesPorUsuario(usuarioId: Int): Flow<List<SolicitudPrestamo>> {
+        return solicitudDao.obtenerPorUsuario(usuarioId).map { entities ->
             entities.map { it.toDomain() }
         }
     }
@@ -74,6 +81,7 @@ class LocalPrestamoRepository(
     }
 
     override suspend fun crearSolicitud(
+        usuarioId: Int, // [HU-03]
         equipoId: Int,
         ambienteDestino: String,
         proposito: String,
@@ -83,6 +91,7 @@ class LocalPrestamoRepository(
         
         val solicitud = SolicitudEntity(
             equipoId = equipoId,
+            usuarioId = usuarioId,
             ambienteDestino = ambienteDestino,
             proposito = proposito,
             duracionHoras = duracionHoras,
@@ -127,11 +136,21 @@ class LocalPrestamoRepository(
 
     override suspend fun conmutarFavorito(equipoId: Int): Result<Unit> {
         equipoDao.conmutarFavorito(equipoId)
+        val equipo = equipoDao.obtenerPorId(equipoId)
+        equipo?.let {
+            try {
+                remoteDataSource.upsertEquipo(it.toDomain().toDto())
+            } catch (e: Exception) { /* Resiliencia: Fallo remoto no bloquea local */ }
+        }
         return Result.success(Unit)
     }
 
     override suspend fun agregarEquipo(equipo: Equipo): Result<Unit> {
-        equipoDao.insertar(equipo.toEntity())
+        val entity = equipo.toEntity()
+        equipoDao.insertar(entity)
+        try {
+            remoteDataSource.upsertEquipo(equipo.toDto())
+        } catch (e: Exception) { /* Resiliencia */ }
         return Result.success(Unit)
     }
 
@@ -194,7 +213,25 @@ class LocalPrestamoRepository(
     }
 
     override suspend fun obtenerEstadisticas(): Map<String, Int> {
-        return emptyMap()
+        val equipos = equipoDao.obtenerTodos().first()
+        val solicitudes = solicitudDao.obtenerTodas().first()
+        
+        return mapOf(
+            "Total Equipos" to equipos.size,
+            "Disponibles" to equipos.count { it.estado == EstadoEquipo.DISPONIBLE },
+            "Prestados" to equipos.count { it.estado == EstadoEquipo.PRESTADO || it.estado == EstadoEquipo.RESERVADO },
+            "Solicitudes Totales" to solicitudes.size,
+            "Pendientes" to solicitudes.count { it.estado == EstadoSolicitud.SOLICITADA }
+        )
+    }
+
+    private suspend fun <T> runRemoteCatching(block: suspend () -> T): Result<T> {
+        return try {
+            Result.success(block())
+        } catch (e: Exception) {
+            // [Semana 08] ADN Resiliente: La falla remota no bloquea la experiencia local
+            Result.failure(e)
+        }
     }
 
     // Mappers
@@ -215,6 +252,7 @@ class LocalPrestamoRepository(
     private fun SolicitudEntity.toDomain() = SolicitudPrestamo(
         id = id,
         equipoId = equipoId,
+        usuarioId = usuarioId,
         ambienteDestino = ambienteDestino,
         proposito = proposito,
         duracionHoras = duracionHoras,
@@ -241,6 +279,7 @@ class LocalPrestamoRepository(
     private fun SolicitudPrestamo.toEntity() = SolicitudEntity(
         id = id,
         equipoId = equipoId,
+        usuarioId = usuarioId,
         ambienteDestino = ambienteDestino,
         proposito = proposito,
         duracionHoras = duracionHoras,
