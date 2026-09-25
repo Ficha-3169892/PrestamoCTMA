@@ -75,52 +75,7 @@ El desarrollo del proyecto está organizado en 16 Historias de Usuario oficiales
 
 ---
 
-## 📊 Cuestionario de Sustentación del Proyecto Integrador (Semana 10)
 
-### 1. Trazabilidad de una Historia de Usuario
-* **Historia:** `HU-05: Inicio de Sesión con Correo Institucional` (#6).
-* **Criterio de Aceptación:** Solo permite acceso si el correo termina en `@sena.edu.co` o `@soy.sena.edu.co`.
-* **Código:** Método `login(correo)` en [`PrestamoViewModel.kt`](file:///C:/Users/Thomas/StudioProjects/PrestamoCTMA/app/src/main/java/com/example/prestamolabctma/viewmodel/PrestamoViewModel.kt) con expresión regular `^[A-Za-z0-9._%+-]+@(soy\.)?sena\.edu\.co$`.
-* **Prueba:** Test unitario `` `HU-05 Inicio de Sesion con Correo Institucional`() `` en [`PrestamoViewModelTest.kt`](file:///C:/Users/Thomas/StudioProjects/PrestamoCTMA/app/src/test/java/com/example/prestamolabctma/viewmodel/PrestamoViewModelTest.kt).
-
-### 2. Fuente Local Canónica (Single Source of Truth - SSOT)
-Room / Repositorio actúa como la única fuente de verdad. La capa de interfaz (Compose) observa emisiones de `Flow`/`StateFlow` desde el ViewModel y nunca modifica directamente la base de datos o el repositorio en memoria.
-
-### 3. Diferencia entre Flow y StateFlow en ViewModel
-- **Flow:** Flujo frío no suspendible de datos asíncronos que solo emite cuando hay un colector activo.
-- **StateFlow:** Flujo caliente que siempre almacena y expone el estado más reciente de la UI (`UiState`), garantizando la preservación del estado ante cambios de configuración (como la rotación de pantalla).
-
-### 4. Representación de Errores de Red en UiState
-Se maneja una jerarquía o campo desacoplado en `PrestamoUiState` (ej. `errorFormulario` o `mensaje`) sin exponer excepciones crudas de red (ej. `IOException` o `401 Unauthorized`), mostrando en su lugar mensajes claros y accionables para el usuario (ej. *"Sin conexión a internet. Mostrando datos locales"*).
-
-### 5. Patrón AAA en Pruebas Unitarias
-- **Arrange (Preparar):** Instanciar el Repositorio y el ViewModel.
-- **Act (Ejecutar):** Invocar `viewModel.registrarSolicitud(equipoId, ambiente, proposito, duracion)`.
-- **Assert (Verificar):** `assertEquals("El ambiente o destino es obligatorio", viewModel.uiState.value.errorFormulario)`.
-
-### 6. Aplicación de TDD (Test-Driven Development)
-Se aplicó el ciclo **Red-Green-Refactor**:
-1. **Red:** Escribir la prueba para la regla de negocio RN-03 (propósito entre 10 y 180 caracteres) antes de la validación.
-2. **Green:** Implementar la condición `if (proposito.length !in 10..180)` en el ViewModel hasta pasar el test.
-3. **Refactor:** Limpiar y estructurar el código manteniendo los tests en verde.
-
-### 7. Confirmación y Regresión de Defectos
-Al corregir el error de doble guardado (BUG-03), primero se ejecutó la prueba de confirmación para validar que la doble pulsación fuera rechazada, y luego se ejecutó la suite completa de 17 tests unitarios en [`PrestamoViewModelTest.kt`](file:///C:/Users/Thomas/StudioProjects/PrestamoCTMA/app/src/test/java/com/example/prestamolabctma/viewmodel/PrestamoViewModelTest.kt) para asegurar que la solicitud normal de préstamo siguiera funcionando sin regresiones.
-
-### 8. Principio de Mínimo Privilegio en Permisos
-Se utiliza el **Photo Picker** nativo (`PickVisualMedia`) para la selección de imágenes de perfil o evidencias, evitando solicitar permisos globales e invasivos de almacenamiento como `READ_MEDIA_IMAGES`.
-
-### 9. Quality Gates en el Pipeline de CI/CD
-El flujo de GitHub Actions (`android.yml`) exige que todo Pull Request cumpla obligatoriamente con:
-1. Compilación Gradle limpia (`./gradlew assembleDebug`).
-2. Ejecución exitosa de la suite completa de pruebas unitarias (`./gradlew testDebugUnitTest`).
-3. Verificación de reglas de calidad con Android Lint (`./gradlew lintDebug`).
-
-### 10. Riesgos Residuales e Identificados
-- **Riesgo:** Pérdida de conectividad prolongada durante el envío de una devolución.
-- **Mitigación:** La aplicación conserva la operación registrada en el Repositorio local de forma idempotente hasta restablecer la comunicación con el servidor.
-
----
 
 ## 📦 Instalación y Ejecución
 1. Clonar el repositorio: `git clone https://github.com/Ficha-3169892/PrestamoCTMA.git`
