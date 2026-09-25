@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- [Semana 09] Rutas para intercambio seguro de archivos con la cámara -->
-    <external-files-path name="my_images" path="Pictures" />
-    <cache-path name="my_cache_images" path="images" />
+    <files-path name="evidencias" path="evidencias/" />
+    <cache-path name="photos" path="photos/" />
 </paths>

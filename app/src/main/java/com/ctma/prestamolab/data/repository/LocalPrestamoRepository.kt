@@ -68,11 +68,15 @@ class LocalPrestamoRepository(
             val equiposResult = equiposDeferred.await()
             val solicitudesResult = solicitudesDeferred.await()
             
-            val equiposDto = equiposResult.getOrThrow()
-            val solicitudesDto = solicitudesResult.getOrThrow()
+            val equiposDto = equiposResult.getOrNull() ?: emptyList()
+            val solicitudesDto = solicitudesResult.getOrNull() ?: emptyList()
             
-            equipoDao.insertarLista(equiposDto.map { it.toDomain().toEntity() })
-            solicitudDao.insertarLista(solicitudesDto.map { it.toDomain().toEntity() })
+            if (equiposDto.isNotEmpty()) {
+                equipoDao.insertarLista(equiposDto.map { it.toDomain().toEntity() })
+            }
+            if (solicitudesDto.isNotEmpty()) {
+                solicitudDao.insertarLista(solicitudesDto.map { it.toDomain().toEntity() })
+            }
             
             Result.success(Unit)
         } catch (e: Exception) {
@@ -147,10 +151,13 @@ class LocalPrestamoRepository(
 
     override suspend fun agregarEquipo(equipo: Equipo): Result<Unit> {
         val entity = equipo.toEntity()
-        equipoDao.insertar(entity)
+        val generatedId = equipoDao.insertar(entity)
+        val equipoConId = if (equipo.id == 0) equipo.copy(id = generatedId.toInt()) else equipo
         try {
-            remoteDataSource.upsertEquipo(equipo.toDto())
-        } catch (e: Exception) { /* Resiliencia */ }
+            remoteDataSource.upsertEquipo(equipoConId.toDto())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         return Result.success(Unit)
     }
 

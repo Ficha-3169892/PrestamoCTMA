@@ -8,34 +8,42 @@ import kotlinx.serialization.Serializable
 
 /**
  * DTO para la entidad Equipo en Supabase.
- * Usa @SerialName para coincidir exactamente con los nombres de columna en Postgres (minúsculas).
+ * Usa @SerialName para coincidir con los nombres de columna en Postgres (minúsculas).
+ * Todos los campos tienen valores por defecto para ser altamente tolerantes a esquemas parciales en Supabase.
  */
 @Serializable
 data class EquipoDto(
     @SerialName("id") val id: Int? = null,
-    @SerialName("nombre") val nombre: String,
-    @SerialName("serie") val serie: String,
-    @SerialName("marca") val marca: String,
-    @SerialName("categoria") val categoria: CategoriaEquipo,
-    @SerialName("estado") val estado: EstadoEquipo,
-    @SerialName("especificaciones") val especificaciones: String,
-    @SerialName("accesorios") val accesorios: List<String>,
-    @SerialName("ubicacion") val ubicacion: String,
+    @SerialName("nombre") val nombre: String = "Equipo sin nombre",
+    @SerialName("serie") val serie: String? = null,
+    @SerialName("marca") val marca: String? = null,
+    @SerialName("categoria") val categoria: CategoriaEquipo = CategoriaEquipo.HERRAMIENTA,
+    @SerialName("estado") val estado: EstadoEquipo = EstadoEquipo.DISPONIBLE,
+    @SerialName("descripcion") val descripcion: String? = null,
+    @SerialName("especificaciones") val especificaciones: String? = null,
+    @SerialName("accesorios") val accesorios: List<String> = emptyList(),
+    @SerialName("ubicacion") val ubicacion: String? = null,
     @SerialName("imagenurl") val imagenUrl: String? = null,
     @SerialName("esfavorito") val esFavorito: Boolean = false
 )
 
 fun EquipoDto.toDomain(): Equipo {
+    val idVal = id ?: 0
+    val especificacionesFinal = especificaciones ?: descripcion ?: "Sin descripción"
+    val serieFinal = if (serie.isNullOrBlank()) "SN-$idVal" else serie
+    val marcaFinal = if (marca.isNullOrBlank()) "SENA" else marca
+    val ubicacionFinal = if (ubicacion.isNullOrBlank()) "Laboratorio" else ubicacion
+
     return Equipo(
-        id = id ?: 0,
+        id = idVal,
         nombre = nombre,
-        serie = serie,
-        marca = marca,
+        serie = serieFinal,
+        marca = marcaFinal,
         categoria = categoria,
         estado = estado,
-        especificaciones = especificaciones,
+        especificaciones = especificacionesFinal,
         accesorios = accesorios,
-        ubicacion = ubicacion,
+        ubicacion = ubicacionFinal,
         imagenUrl = imagenUrl,
         esFavorito = esFavorito
     )
@@ -49,6 +57,7 @@ fun Equipo.toDto(): EquipoDto {
         marca = marca,
         categoria = categoria,
         estado = estado,
+        descripcion = especificaciones,
         especificaciones = especificaciones,
         accesorios = accesorios,
         ubicacion = ubicacion,

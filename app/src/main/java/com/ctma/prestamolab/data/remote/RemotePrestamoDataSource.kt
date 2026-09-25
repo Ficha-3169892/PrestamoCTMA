@@ -9,25 +9,32 @@ import kotlinx.coroutines.withContext
 
 /**
  * Fuente de datos remota que interactúa con Supabase para gestionar
- * equipos y solicitudes de préstamo.
+ * equipos y solicitudes de préstamo con alta tolerancia a errores.
  */
 class RemotePrestamoDataSource {
 
     private val client = supabase
 
     /**
-     * Obtiene la lista de todos los equipos disponibles en la base de datos.
+     * Obtiene la lista de todos los equipos disponibles en la base de datos (tabla 'equipos' o 'articulos').
      */
     suspend fun fetchEquipos(): Result<List<EquipoDto>> = withContext(Dispatchers.IO) {
         if (client.supabaseUrl.contains("YOUR_PROJECT_URL")) {
             return@withContext Result.success(emptyList())
         }
         try {
-            val equipos = client.postgrest.from("equipos")
-                .select()
-                .decodeList<EquipoDto>()
+            val equipos = try {
+                client.postgrest.from("equipos")
+                    .select()
+                    .decodeList<EquipoDto>()
+            } catch (_: Exception) {
+                client.postgrest.from("articulos")
+                    .select()
+                    .decodeList<EquipoDto>()
+            }
             Result.success(equipos)
         } catch (e: Exception) {
+            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -40,28 +47,47 @@ class RemotePrestamoDataSource {
             return@withContext Result.success(emptyList())
         }
         try {
-            val solicitudes = client.postgrest.from("solicitudes")
-                .select {
-                    order("fechaCreacion", Order.DESCENDING)
-                }
-                .decodeList<SolicitudDto>()
+            val solicitudes = try {
+                client.postgrest.from("solicitudes")
+                    .select {
+                        order("fechacreacion", Order.DESCENDING)
+                    }
+                    .decodeList<SolicitudDto>()
+            } catch (_: Exception) {
+                client.postgrest.from("solicitudes")
+                    .select()
+                    .decodeList<SolicitudDto>()
+            }
             Result.success(solicitudes)
         } catch (e: Exception) {
+            e.printStackTrace()
             Result.failure(e)
         }
     }
 
     /**
-     * Inserta o actualiza un equipo en la base de datos.
-     * [HU-08/09] Usa 'serie' como llave de resolución de conflictos para evitar desincronización de IDs.
+     * Inserta o actualiza un equipo en la base de datos (tabla 'equipos' o 'articulos').
      */
     suspend fun upsertEquipo(dto: EquipoDto): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            client.postgrest.from("equipos").upsert(dto) {
-                onConflict = "serie"
+            try {
+                if (!dto.serie.isNullOrBlank()) {
+                    try {
+                        client.postgrest.from("equipos").upsert(dto) {
+                            onConflict = "serie"
+                        }
+                    } catch (_: Exception) {
+                        client.postgrest.from("equipos").upsert(dto)
+                    }
+                } else {
+                    client.postgrest.from("equipos").upsert(dto)
+                }
+            } catch (_: Exception) {
+                client.postgrest.from("articulos").upsert(dto)
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -74,6 +100,7 @@ class RemotePrestamoDataSource {
             client.postgrest.from("solicitudes").upsert(dto)
             Result.success(Unit)
         } catch (e: Exception) {
+            e.printStackTrace()
             Result.failure(e)
         }
     }

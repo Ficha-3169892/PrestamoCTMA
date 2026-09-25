@@ -38,13 +38,16 @@ class PrestamoLabApplication : Application() {
         // Inyectar la base de datos en el ServiceLocator
         ServiceLocator.initialize(this)
 
-        // [Semana 06 & 08] Sincronización Inicial Automatizada si SSOT está vacía
+        // [Semana 06 & 08] Sincronización Inicial Automatizada
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // Intentar sincronización con Supabase primero
+                ServiceLocator.repository.sincronizar()
+
                 val equipoDao = database.equipoDao()
                 val equipos = equipoDao.obtenerTodos().first()
                 if (equipos.isEmpty()) {
-                    // [HU-01] Datos semilla iniciales
+                    // [HU-01] Datos semilla iniciales si la DB local y remota están vacías
                     val semillas = listOf(
                         Equipo(0, "Multímetro Digital Fluke 115", "SN-MED-001", "Fluke", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE, "Precisión profesional.", listOf("Cables"), "Estante A1", null, true),
                         Equipo(0, "Analizador de Redes Cisco Pro", "SN-RED-045", "Cisco", CategoriaEquipo.REDES, EstadoEquipo.DISPONIBLE, "Diagnóstico de red.", listOf("Cable consola"), "Lab 2", null, false),

@@ -21,8 +21,8 @@ interface EquipoDao {
     suspend fun obtenerPorId(id: Int): EquipoEntity?
 
     // [HU 09] Registro de Nuevos Equipos en Inventario
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertar(equipo: EquipoEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertar(equipo: EquipoEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarLista(equipos: List<EquipoEntity>)
