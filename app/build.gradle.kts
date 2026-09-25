@@ -5,14 +5,12 @@ plugins {
 
 android {
     namespace = "com.example.prestamolabctma"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.prestamolabctma"
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -21,9 +19,8 @@ android {
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     compileOptions {
@@ -39,16 +36,21 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.coil.compose)
+    
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    debugImplementation(platform(libs.androidx.compose.bom))
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
