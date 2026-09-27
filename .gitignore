@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Carpetas ocultas generadas por herramientas o agentes de IA
+.artifacts/
+.artifacts
+
