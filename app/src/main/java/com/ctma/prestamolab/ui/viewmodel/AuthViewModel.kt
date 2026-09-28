@@ -17,6 +17,7 @@ data class AuthUiState(
     val usuario: Usuario? = null,
     val mensaje: String? = null,
     val cargando: Boolean = false,
+    val cargandoSesionInicial: Boolean = true,
     val erroresLogin: ErroresLogin = ErroresLogin(),
 )
 
@@ -27,6 +28,11 @@ class AuthViewModel(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            authRepository.sesionCargada.collect { cargada ->
+                _uiState.update { it.copy(cargandoSesionInicial = !cargada) }
+            }
+        }
         viewModelScope.launch {
             authRepository.usuarioLogueado.collect { user ->
                 _uiState.update { it.copy(usuario = user) }

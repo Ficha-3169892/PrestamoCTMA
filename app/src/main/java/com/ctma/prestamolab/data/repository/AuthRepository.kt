@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 interface AuthRepository {
     val usuarioLogueado: StateFlow<Usuario?>
+    val sesionCargada: StateFlow<Boolean>
     
     suspend fun iniciarSesion(correo: String, contrasena: String): Result<Usuario>
     suspend fun cerrarSesion()
@@ -15,6 +16,9 @@ interface AuthRepository {
 class InMemoryAuthRepository : AuthRepository {
     private val _usuarioLogueado = kotlinx.coroutines.flow.MutableStateFlow<Usuario?>(null)
     override val usuarioLogueado = _usuarioLogueado.asStateFlow()
+
+    private val _sesionCargada = kotlinx.coroutines.flow.MutableStateFlow(true)
+    override val sesionCargada = _sesionCargada.asStateFlow()
 
     override suspend fun iniciarSesion(correo: String, contrasena: String): Result<Usuario> {
         val esValido = correo.endsWith("@soy.sena.edu.co") || correo.endsWith("@sena.edu.co")

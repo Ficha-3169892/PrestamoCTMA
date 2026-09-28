@@ -26,14 +26,21 @@ class SupabaseAuthRepository(
     private val _usuarioLogueado = MutableStateFlow<Usuario?>(null)
     override val usuarioLogueado: StateFlow<Usuario?> = _usuarioLogueado.asStateFlow()
 
+    private val _sesionCargada = MutableStateFlow(false)
+    override val sesionCargada: StateFlow<Boolean> = _sesionCargada.asStateFlow()
+
     private val scope = CoroutineScope(Dispatchers.IO)
 
     init {
         // Intentar recuperar sesión local al iniciar
         scope.launch {
-            val localUser = usuarioDao.obtenerTodos().first().firstOrNull()
-            if (localUser != null) {
-                _usuarioLogueado.value = localUser.toDomain()
+            try {
+                val localUser = usuarioDao.obtenerTodos().first().firstOrNull()
+                if (localUser != null) {
+                    _usuarioLogueado.value = localUser.toDomain()
+                }
+            } finally {
+                _sesionCargada.value = true
             }
         }
     }
